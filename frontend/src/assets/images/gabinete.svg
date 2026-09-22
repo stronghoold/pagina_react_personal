@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0f172a"/>
+      <stop offset="1" stop-color="#2e1065"/>
+    </linearGradient>
+    <linearGradient id="glass" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1e293b"/>
+      <stop offset="1" stop-color="#0f172a"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="450" fill="url(#bg)"/>
+  <circle cx="650" cy="90" r="130" fill="#a855f7" opacity="0.12"/>
+  <circle cx="140" cy="370" r="110" fill="#22d3ee" opacity="0.1"/>
+  <!-- Gabinete -->
+  <rect x="210" y="80" width="380" height="300" rx="18" fill="#0b1220" stroke="#334155" stroke-width="3"/>
+  <!-- Panel lateral -->
+  <rect x="236" y="106" width="120" height="248" rx="10" fill="url(#glass)" stroke="#475569" stroke-width="2"/>
+  <!-- RGB interno -->
+  <rect x="250" y="120" width="92" height="220" rx="8" fill="#a855f7" opacity="0.25"/>
+  <g fill="#a855f7" opacity="0.6">
+    <rect x="258" y="150" width="76" height="10" rx="4"/><rect x="258" y="175" width="76" height="10" rx="4"/><rect x="258" y="200" width="76" height="10" rx="4"/><rect x="258" y="225" width="76" height="10" rx="4"/><rect x="258" y="250" width="76" height="10" rx="4"/><rect x="258" y="275" width="76" height="10" rx="4"/>
+  </g>
+  <!-- Fanes frontales -->
+  <circle cx="470" cy="170" r="42" fill="#111827" stroke="#334155" stroke-width="3"/>
+  <circle cx="470" cy="170" r="15" fill="#22d3ee" opacity="0.7"/>
+  <circle cx="470" cy="270" r="42" fill="#111827" stroke="#334155" stroke-width="3"/>
+  <circle cx="470" cy="270" r="15" fill="#22d3ee" opacity="0.7"/>
+  <!-- Base -->
+  <rect x="250" y="368" width="60" height="14" rx="4" fill="#334155"/>
+  <rect x="490" y="368" width="60" height="14" rx="4" fill="#334155"/>
+  <!-- Puerto USB frontal -->
+  <rect x="380" y="118" width="56" height="20" rx="5" fill="#1e293b" stroke="#64748b" stroke-width="2"/>
+  <circle cx="392" cy="128" r="3" fill="#22d3ee"/><circle cx="402" cy="128" r="3" fill="#22d3ee"/>
+  <text x="400" y="425" fill="#94a3b8" font-family="Arial" font-size="22" font-weight="bold" text-anchor="middle">GABINETE GAMING</text>
+</svg>

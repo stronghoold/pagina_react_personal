@@ -1,0 +1,1001 @@
+{
+  "info": {
+    "name": "TechPC API - FastAPI (Quinto Avance)",
+    "description": "API de TechPC con backend FastAPI (Python).\n\nBase URL: http://localhost:8000/api\nDocumentación Swagger: http://127.0.0.1:8000/docs\n\n─── CÓMO USAR ───\n1. Importa este archivo en Postman.\n2. Importa el environment TechPC_FastAPI.postman_environment.json.\n3. Selecciona el environment 'TechPC FastAPI - Local'.\n4. Ejecuta 'Login' para obtener el token JWT (se guarda automáticamente).\n5. Las demás peticiones protegidas lo usan automáticamente.\n6. Para las pruebas de ventas, ejecuta primero 'Registrar venta' y la variable\n   ventaId se guarda sola para generar la factura.\n\n─── CREDENCIALES DE PRUEBA ───\nAdmin: admin@techpc.com / Admin123*\nCliente: cliente@techpc.com / Admin123*\n\n─── PERMISOS ───\n❌ = Pública (no requiere token)\n🔐 = Requiere token JWT\n👑 = Solo administrador\n🔧 = Admin o empleado\n\n─── NUEVO EN EL QUINTO AVANCE ───\n🛒 Ventas y reportes (PDF/Excel) · 📄 Facturación · 📊 Dashboards\n📨 PQR · 🤖 Chatbot con IA",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8000/api" },
+    { "key": "token", "value": "" },
+    { "key": "userId", "value": "" },
+    { "key": "productId", "value": "" },
+    { "key": "serviceId", "value": "" },
+    { "key": "clienteId", "value": "2" },
+    { "key": "ventaId", "value": "" },
+    { "key": "facturaId", "value": "" },
+    { "key": "pqrId", "value": "" },
+    { "key": "conversacionId", "value": "" },
+    { "key": "fecha", "value": "2026-09-21" }
+  ],
+  "item": [
+    {
+      "name": "🏥 Health Check",
+      "description": "Verificar que el servidor FastAPI está funcionando.",
+      "item": [
+        {
+          "name": "Root - API Status",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "http://localhost:8000/",
+              "host": ["http://localhost:8000"],
+              "path": [""]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Swagger Docs (navegador)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "http://127.0.0.1:8000/docs",
+              "host": ["http://127.0.0.1:8000"],
+              "path": ["docs"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "🔐 Autenticación y Usuarios",
+      "description": "Registro, login JWT y gestión de usuarios.",
+      "item": [
+        {
+          "name": "Registrar usuario (cliente) ❌",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Juan\",\n  \"apellido\": \"Pérez\",\n  \"tipoDocumento\": \"CC\",\n  \"numeroDocumento\": \"1098765432\",\n  \"direccion\": \"Cra 10 # 20-30, Bogotá\",\n  \"telefono\": \"3101234567\",\n  \"correo\": \"juan@ejemplo.com\",\n  \"contrasena\": \"MiPass123*\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/usuarios/registro",
+              "host": ["{{baseUrl}}"],
+              "path": ["usuarios", "registro"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Login (genera JWT) ❌",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var data = pm.response.json();",
+                  "if (data.token) {",
+                  "  pm.collectionVariables.set('token', data.token);",
+                  "  if (data.user) {",
+                  "    pm.collectionVariables.set('userId', data.user.id);",
+                  "  }",
+                  "  pm.test('Login exitoso - JWT generado', function () { pm.expect(data.token).to.be.a('string'); });",
+                  "  console.log('✅ Token guardado. Rol: ' + (data.user ? data.user.rol : 'N/A'));",
+                  "} else {",
+                  "  console.error('❌ No se recibió token.');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@techpc.com\",\n  \"contrasena\": \"Admin123*\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Mi perfil (me) 🔐",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "me"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Listar roles 🔐",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/roles",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "roles"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Listar usuarios 👑",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/usuarios",
+              "host": ["{{baseUrl}}"],
+              "path": ["usuarios"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Consultar usuario por ID 👑",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/usuarios/{{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["usuarios", "{{userId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Actualizar usuario 👑",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Juan\",\n  \"apellido\": \"Pérez Updated\",\n  \"rol_id\": 2\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/usuarios/{{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["usuarios", "{{userId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Cambiar estado (activo/inactivo) 👑",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"estado\": \"inactivo\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/usuarios/{{userId}}/estado",
+              "host": ["{{baseUrl}}"],
+              "path": ["usuarios", "{{userId}}", "estado"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Eliminar usuario 👑",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/usuarios/{{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["usuarios", "{{userId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "⚠️ Endpoint protegido SIN token (esperado 401)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/usuarios",
+              "host": ["{{baseUrl}}"],
+              "path": ["usuarios"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "📦 Productos",
+      "description": "CRUD del catálogo de productos.",
+      "item": [
+        {
+          "name": "Listar productos ❌",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/productos",
+              "host": ["{{baseUrl}}"],
+              "path": ["productos"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Consultar producto por ID ❌",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/productos/{{productId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["productos", "{{productId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Listar categorías ❌",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/productos/categorias",
+              "host": ["{{baseUrl}}"],
+              "path": ["productos", "categorias"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Crear producto 🔧",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var data = pm.response.json();",
+                  "if (data.product && data.product.id) {",
+                  "  pm.collectionVariables.set('productId', data.product.id);",
+                  "  console.log('✅ productId guardado: ' + data.product.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"RTX 5080 16GB\",\n  \"descripcion\": \"Tarjeta gráfica de alto rendimiento para gaming en 4K\",\n  \"precio\": 3500000,\n  \"stock\": 15,\n  \"imagen_url\": \"/images/rtx5080.jpg\",\n  \"categoria_id\": 2\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/productos",
+              "host": ["{{baseUrl}}"],
+              "path": ["productos"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Actualizar producto 🔧",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"RTX 5080 16GB OC\",\n  \"precio\": 3800000,\n  \"stock\": 10,\n  \"estado\": \"activo\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/productos/{{productId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["productos", "{{productId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Eliminar producto 👑",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/productos/{{productId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["productos", "{{productId}}"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "🔧 Servicios",
+      "description": "CRUD del catálogo de servicios.",
+      "item": [
+        {
+          "name": "Listar servicios ❌",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/servicios",
+              "host": ["{{baseUrl}}"],
+              "path": ["servicios"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Consultar servicio por ID ❌",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/servicios/{{serviceId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["servicios", "{{serviceId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Crear servicio 🔧",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var data = pm.response.json();",
+                  "if (data.service && data.service.id) {",
+                  "  pm.collectionVariables.set('serviceId', data.service.id);",
+                  "  console.log('✅ serviceId guardado: ' + data.service.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Instalación de Windows 11\",\n  \"descripcion\": \"Instalación limpia de Windows 11 con controladores y actualizaciones\",\n  \"precio\": 50000,\n  \"duracion_estimada\": \"1-2 horas\",\n  \"imagen_url\": \"/images/servicio-windows.jpg\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/servicios",
+              "host": ["{{baseUrl}}"],
+              "path": ["servicios"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Actualizar servicio 🔧",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Instalación de Windows 11 Pro\",\n  \"precio\": 60000,\n  \"duracion_estimada\": \"2 horas\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/servicios/{{serviceId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["servicios", "{{serviceId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Eliminar servicio 👑",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/servicios/{{serviceId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["servicios", "{{serviceId}}"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "🛒 Ventas y Reportes (Quinto Avance)",
+      "description": "Registro de ventas, historial con filtros y reporte diario en PDF y Excel.",
+      "item": [
+        {
+          "name": "Registrar venta 🔐",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var data = pm.response.json();",
+                  "if (data.sale) {",
+                  "  pm.collectionVariables.set('ventaId', data.sale.id);",
+                  "  pm.test('Venta registrada con numero consecutivo', function () { pm.expect(data.sale.numero_venta).to.be.a('string'); });",
+                  "  console.log('🧾 Venta: ' + data.sale.numero_venta + ' - Total: ' + data.sale.total);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"metodo_pago\": \"tarjeta\",\n  \"estado\": \"pagada\",\n  \"descuento\": 0,\n  \"items\": [\n    {\n      \"tipo\": \"producto\",\n      \"producto_id\": 2,\n      \"cantidad\": 1,\n      \"descuento\": 0\n    },\n    {\n      \"tipo\": \"servicio\",\n      \"servicio_id\": 1,\n      \"cantidad\": 1,\n      \"descuento\": 0\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/ventas",
+              "host": ["{{baseUrl}}"],
+              "path": ["ventas"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Historial de ventas con filtros 🔧",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/ventas?fecha_inicio={{fecha}}&estado=pagada",
+              "host": ["{{baseUrl}}"],
+              "path": ["ventas"],
+              "query": [
+                { "key": "fecha_inicio", "value": "{{fecha}}" },
+                { "key": "estado", "value": "pagada" }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Consultar venta por ID 🔐",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/ventas/{{ventaId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["ventas", "{{ventaId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Cambiar estado de venta 🔧",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"estado\": \"pagada\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/ventas/{{ventaId}}/estado",
+              "host": ["{{baseUrl}}"],
+              "path": ["ventas", "{{ventaId}}", "estado"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Reporte diario de ventas (JSON) 🔧",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/ventas/reporte/diario?fecha={{fecha}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["ventas", "reporte", "diario"],
+              "query": [{ "key": "fecha", "value": "{{fecha}}" }]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Reporte diario en PDF 🔧",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/ventas/reporte/diario/pdf?fecha={{fecha}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["ventas", "reporte", "diario", "pdf"],
+              "query": [{ "key": "fecha", "value": "{{fecha}}" }]
+            },
+            "description": "Descarga el archivo PDF del reporte diario de ventas."
+          },
+          "response": []
+        },
+        {
+          "name": "Reporte diario en Excel 🔧",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/ventas/reporte/diario/excel?fecha={{fecha}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["ventas", "reporte", "diario", "excel"],
+              "query": [{ "key": "fecha", "value": "{{fecha}}" }]
+            },
+            "description": "Descarga el archivo .xlsx del reporte diario de ventas."
+          },
+          "response": []
+        },
+        {
+          "name": "Eliminar venta 👑",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/ventas/{{ventaId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["ventas", "{{ventaId}}"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "📄 Facturación (Quinto Avance)",
+      "description": "Generación, consulta y descarga de facturas de venta.",
+      "item": [
+        {
+          "name": "Generar factura desde una venta 🔧",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var data = pm.response.json();",
+                  "if (data.invoice) {",
+                  "  pm.collectionVariables.set('facturaId', data.invoice.id);",
+                  "  pm.test('Factura generada', function () { pm.expect(data.invoice.numero_factura).to.be.a('string'); });",
+                  "  console.log('📄 Factura: ' + data.invoice.numero_factura);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"venta_id\": {{ventaId}},\n  \"metodo_pago\": \"tarjeta\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/facturas",
+              "host": ["{{baseUrl}}"],
+              "path": ["facturas"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Consultar facturas 🔐",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/facturas?numero_factura=F",
+              "host": ["{{baseUrl}}"],
+              "path": ["facturas"],
+              "query": [{ "key": "numero_factura", "value": "F" }]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Consultar factura por ID 🔐",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/facturas/{{facturaId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["facturas", "{{facturaId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Descargar factura en PDF 🔐",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/facturas/{{facturaId}}/pdf",
+              "host": ["{{baseUrl}}"],
+              "path": ["facturas", "{{facturaId}}", "pdf"]
+            },
+            "description": "Descarga la factura en formato PDF."
+          },
+          "response": []
+        },
+        {
+          "name": "Cambiar estado de factura 🔧",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"estado\": \"pagada\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/facturas/{{facturaId}}/estado",
+              "host": ["{{baseUrl}}"],
+              "path": ["facturas", "{{facturaId}}", "estado"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "📊 Dashboards y Estadísticas (Quinto Avance)",
+      "description": "Indicadores, gráficos de barras y gráficos lineales alimentados desde la base de datos.",
+      "item": [
+        {
+          "name": "Dashboard administrador 👑",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/dashboard/admin",
+              "host": ["{{baseUrl}}"],
+              "path": ["dashboard", "admin"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Dashboard empleado 🔧",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/dashboard/empleado",
+              "host": ["{{baseUrl}}"],
+              "path": ["dashboard", "empleado"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Dashboard cliente 🔐",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/dashboard/cliente",
+              "host": ["{{baseUrl}}"],
+              "path": ["dashboard", "cliente"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Estadísticas de ventas con filtros 🔧",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/dashboard/ventas?agrupacion=dia&fecha_inicio={{fecha}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["dashboard", "ventas"],
+              "query": [
+                { "key": "agrupacion", "value": "dia" },
+                { "key": "fecha_inicio", "value": "{{fecha}}" }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Filtros de los dashboards 🔧",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/dashboard/filtros",
+              "host": ["{{baseUrl}}"],
+              "path": ["dashboard", "filtros"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "📨 Módulo PQR (Quinto Avance)",
+      "description": "Registro y gestión de Peticiones, Quejas y Reclamos.",
+      "item": [
+        {
+          "name": "Registrar PQR 🔐",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var data = pm.response.json();",
+                  "if (data.pqr) {",
+                  "  pm.collectionVariables.set('pqrId', data.pqr.id);",
+                  "  pm.test('PQR registrada en estado pendiente', function () { pm.expect(data.pqr.estado).to.eql('pendiente'); });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tipo\": \"queja\",\n  \"asunto\": \"Retraso en la entrega del pedido\",\n  \"descripcion\": \"El pedido fue despachado con dos días de retraso y necesito conocer el motivo.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pqr",
+              "host": ["{{baseUrl}}"],
+              "path": ["pqr"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Listar PQR 🔐",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/pqr?estado=pendiente",
+              "host": ["{{baseUrl}}"],
+              "path": ["pqr"],
+              "query": [{ "key": "estado", "value": "pendiente" }]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Consultar PQR por ID 🔐",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/pqr/{{pqrId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["pqr", "{{pqrId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Gestionar PQR (estado y respuesta) 🔧",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"estado\": \"respondida\",\n  \"respuesta\": \"Lamentamos la demora. El pedido ya fue despachado y te enviamos el número de guía por correo.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pqr/{{pqrId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["pqr", "{{pqrId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Eliminar PQR 👑",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/pqr/{{pqrId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["pqr", "{{pqrId}}"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "🤖 Chatbot con IA (Quinto Avance)",
+      "description": "Chatbot de atención al cliente. Si IA_API_KEY está configurada en el .env responde con IA; si no, usa el motor local de reglas.",
+      "item": [
+        {
+          "name": "Información del chatbot ❌",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/chat/info",
+              "host": ["{{baseUrl}}"],
+              "path": ["chat", "info"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Enviar mensaje al chatbot ❌",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var data = pm.response.json();",
+                  "if (data.conversacion_id) {",
+                  "  pm.collectionVariables.set('conversacionId', data.conversacion_id);",
+                  "  console.log('🤖 Fuente de la respuesta: ' + data.fuente);",
+                  "  pm.test('Respuesta del chatbot recibida', function () { pm.expect(data.respuesta).to.be.a('string'); });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mensaje\": \"¿Qué productos tienen disponibles y cuánto cuestan?\",\n  \"conversacion_id\": null\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/chat",
+              "host": ["{{baseUrl}}"],
+              "path": ["chat"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Historial de conversaciones 🔐",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/chat/conversaciones",
+              "host": ["{{baseUrl}}"],
+              "path": ["chat", "conversaciones"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Mensajes de una conversación 🔐",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/chat/conversaciones/{{conversacionId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["chat", "conversaciones", "{{conversacionId}}"]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

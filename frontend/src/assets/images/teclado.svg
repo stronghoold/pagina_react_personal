@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0f172a"/>
+      <stop offset="1" stop-color="#042f2e"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="450" fill="url(#bg)"/>
+  <circle cx="640" cy="100" r="130" fill="#22d3ee" opacity="0.1"/>
+  <circle cx="150" cy="370" r="110" fill="#818cf8" opacity="0.12"/>
+  <!-- Base -->
+  <rect x="130" y="120" width="540" height="240" rx="16" fill="#0b1220" stroke="#334155" stroke-width="3"/>
+  <!-- Teclas -->
+  <g fill="#1e293b" stroke="#475569" stroke-width="2">
+    <rect x="155" y="145" width="52" height="40" rx="6"/>
+    <rect x="215" y="145" width="52" height="40" rx="6"/>
+    <rect x="275" y="145" width="52" height="40" rx="6"/>
+    <rect x="335" y="145" width="52" height="40" rx="6"/>
+    <rect x="395" y="145" width="52" height="40" rx="6"/>
+    <rect x="455" y="145" width="52" height="40" rx="6"/>
+    <rect x="515" y="145" width="52" height="40" rx="6"/>
+    <rect x="575" y="145" width="68" height="40" rx="6"/>
+    <rect x="155" y="195" width="52" height="40" rx="6"/>
+    <rect x="215" y="195" width="52" height="40" rx="6"/>
+    <rect x="275" y="195" width="52" height="40" rx="6"/>
+    <rect x="335" y="195" width="52" height="40" rx="6"/>
+    <rect x="395" y="195" width="52" height="40" rx="6"/>
+    <rect x="455" y="195" width="52" height="40" rx="6"/>
+    <rect x="515" y="195" width="52" height="40" rx="6"/>
+    <rect x="575" y="195" width="68" height="40" rx="6"/>
+    <rect x="155" y="245" width="52" height="40" rx="6"/>
+    <rect x="215" y="245" width="52" height="40" rx="6"/>
+    <rect x="275" y="245" width="52" height="40" rx="6"/>
+    <rect x="335" y="245" width="52" height="40" rx="6"/>
+    <rect x="395" y="245" width="52" height="40" rx="6"/>
+    <rect x="455" y="245" width="52" height="40" rx="6"/>
+    <rect x="515" y="245" width="52" height="40" rx="6"/>
+    <rect x="575" y="245" width="68" height="40" rx="6"/>
+    <rect x="155" y="295" width="330" height="40" rx="6"/>
+    <rect x="515" y="295" width="52" height="40" rx="6"/>
+    <rect x="575" y="295" width="68" height="40" rx="6"/>
+  </g>
+  <!-- Teclas RGB -->
+  <g fill="#22d3ee" opacity="0.6">
+    <rect x="335" y="145" width="52" height="40" rx="6"/>
+    <rect x="395" y="195" width="52" height="40" rx="6"/>
+    <rect x="215" y="245" width="52" height="40" rx="6"/>
+    <rect x="455" y="245" width="52" height="40" rx="6"/>
+  </g>
+  <text x="400" y="425" fill="#94a3b8" font-family="Arial" font-size="22" font-weight="bold" text-anchor="middle">TECLADO MECÁNICO RGB</text>
+</svg>

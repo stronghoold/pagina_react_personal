@@ -1,0 +1,16 @@
+{
+  "etiqueta": "Listar usuarios SIN token",
+  "metodo": "GET",
+  "url": "http://127.0.0.1:8000/api/usuarios",
+  "headers": {
+    "Content-Type": "application/json"
+  },
+  "body": null,
+  "status": 401,
+  "razon": "Unauthorized",
+  "respuesta": {
+    "detail": "Token no proporcionado."
+  },
+  "tiempo_ms": 30,
+  "bytes": 36
+}

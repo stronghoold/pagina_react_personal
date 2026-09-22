@@ -1,0 +1,927 @@
+{
+  "requirements": "fastapi\nuvicorn[standard]\nsqlalchemy\npydantic\npydantic[email]\npython-dotenv\npython-jose[cryptography]\nbcrypt\npymysql\nemail-validator",
+  "env_example": "# ─── Base de datos MySQL ───\nDB_HOST=localhost\nDB_USER=root\nDB_PASSWORD=tu_password\nDB_NAME=techpc_db\nDB_PORT=3306\n\n# ─── Servidor ───\nPORT=8000\n\n# ─── Seguridad JWT ───\nJWT_SECRET=tu_secreto_super_seguro",
+  "env": "DB_HOST=localhost\nDB_USER=root\nDB_PASSWORD=\nDB_NAME=techpc_db\nDB_PORT=3306\n\nPORT=8000\nJWT_SECRET=techpc_super_secreto_2024\n",
+  "database_sql": "-- ============================================\n-- BASE DE DATOS: TechPC (Cuarto Avance - FastAPI)\n-- Entidades: roles, permisos, rol_permisos, usuarios,\n--            categorias_productos, productos, servicios\n-- ============================================\nCREATE DATABASE IF NOT EXISTS techpc_db;\nUSE techpc_db;\n\n-- ============================================\n-- TABLA: roles\n-- ============================================\nCREATE TABLE IF NOT EXISTS roles (\n  id INT AUTO_INCREMENT PRIMARY KEY,\n  nombre VARCHAR(30) NOT NULL UNIQUE,\n  descripcion VARCHAR(100)\n);\n\nINSERT INTO roles (nombre, descripcion) VALUES\n  ('administrador', 'Gestión total del sistema'),\n  ('empleado', 'Gestión parcial del sistema'),\n  ('cliente', 'Acceso a funcionalidades de cliente');\n\n-- ============================================\n-- TABLA: permisos\n-- ============================================\nCREATE TABLE IF NOT EXISTS permisos (\n  id INT AUTO_INCREMENT PRIMARY KEY,\n  nombre VARCHAR(50) NOT NULL UNIQUE,\n  descripcion VARCHAR(150)\n);\n\nINSERT INTO permisos (nombre, descripcion) VALUES\n  ('gestion_usuarios', 'Crear, editar, eliminar y cambiar estado de usuarios'),\n  ('gestion_productos', 'Crear, editar y eliminar productos'),\n  ('gestion_servicios', 'Crear, editar y eliminar servicios'),\n  ('ver_panel_admin', 'Acceder al panel de administración'),\n  ('ver_panel_empleado', 'Acceder al panel de empleado'),\n  ('ver_panel_cliente', 'Acceder al panel de cliente');\n\n-- ============================================\n-- TABLA: rol_permisos (relación N:M)\n-- ============================================\nCREATE TABLE IF NOT EXISTS rol_permisos (\n  rol_id INT NOT NULL,\n  permiso_id INT NOT NULL,\n  PRIMARY KEY (rol_id, permiso_id),\n  FOREIGN KEY (rol_id) REFERENCES roles(id),\n  FOREIGN KEY (permiso_id) REFERENCES permisos(id)\n);\n\nINSERT INTO rol_permisos (rol_id, permiso_id) VALUES\n  (1, 1), (1, 2), (1, 3), (1, 4), (1, 5), (1, 6),\n  (2, 2), (2, 3), (2, 5),\n  (3, 6);\n\n-- ============================================\n-- TABLA: usuarios\n-- ============================================\nCREATE TABLE IF NOT EXISTS usuarios (\n  id INT AUTO_INCREMENT PRIMARY KEY,\n  nombre VARCHAR(50) NOT NULL,\n  apellido VARCHAR(50) NOT NULL,\n  tipo_documento VARCHAR(5) NOT NULL,\n  numero_documento VARCHAR(12) NOT NULL UNIQUE,\n  direccion VARCHAR(80) NOT NULL,\n  telefono VARCHAR(16) NOT NULL,\n  correo VARCHAR(80) NOT NULL UNIQUE,\n  contrasena VARCHAR(255) NOT NULL,\n  rol_id INT NOT NULL DEFAULT 3,\n  estado ENUM('activo', 'inactivo') DEFAULT 'activo',\n  fecha_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n  FOREIGN KEY (rol_id) REFERENCES roles(id)\n);\n\n-- ============================================\n-- USUARIO ADMINISTRADOR POR DEFECTO\n-- Contraseña: Admin123* (hash bcrypt)\n-- ============================================\nINSERT INTO usuarios (nombre, apellido, tipo_documento, numero_documento, direccion, telefono, correo, contrasena, rol_id, estado)\nVALUES ('Administrador', 'General', 'CC', '1234567890', 'Cra 15 # 45-12, Bogotá', '3001234567', 'admin@techpc.com', '$2b$10$ZPzZuuyGu4GVP8d8RInJZ.gBx5CCc3BxNGozfKswVAsJv7spuEl06', 1, 'activo');\n\n-- ============================================\n-- TABLA: categorias_productos\n-- ============================================\nCREATE TABLE IF NOT EXISTS categorias_productos (\n  id INT AUTO_INCREMENT PRIMARY KEY,\n  nombre VARCHAR(50) NOT NULL,\n  descripcion VARCHAR(150)\n);\n\nINSERT INTO categorias_productos (nombre, descripcion) VALUES\n  ('Procesadores', 'CPUs para escritorio y portátiles'),\n  ('Tarjetas Gráficas', 'GPUs para gaming y trabajo'),\n  ('Memoria RAM', 'Módulos DDR4 y DDR5'),\n  ('Almacenamiento', 'SSD, HDD y NVMe'),\n  ('Motherboards', 'Placas base ATX, Micro-ATX, Mini-ITX'),\n  ('Fuentes de Poder', 'PSU certificadas'),\n  ('Gabinetes', 'Torres y cases para PC'),\n  ('Monitores', 'Pantallas para gaming y oficina'),\n  ('Periféricos', 'Teclados, mouse, audífonos');\n\n-- ============================================\n-- TABLA: productos\n-- ============================================\nCREATE TABLE IF NOT EXISTS productos (\n  id INT AUTO_INCREMENT PRIMARY KEY,\n  nombre VARCHAR(100) NOT NULL,\n  descripcion TEXT,\n  precio DECIMAL(12,2) NOT NULL,\n  stock INT NOT NULL DEFAULT 0,\n  imagen_url VARCHAR(255),\n  categoria_id INT,\n  estado ENUM('activo', 'inactivo') DEFAULT 'activo',\n  fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,\n  FOREIGN KEY (categoria_id) REFERENCES categorias_productos(id)\n);\n\nINSERT INTO productos (nombre, descripcion, precio, stock, categoria_id) VALUES\n  ('Procesador AMD Ryzen 7 7800X3D', 'Procesador de 8 núcleos y 16 hilos para gaming', 1550000, 12, 1),\n  ('Tarjeta Gráfica RTX 4070 Super', 'GPU NVIDIA con 12GB GDDR6X', 2850000, 8, 2),\n  ('Memoria RAM 32GB DDR5 6000MHz', 'Kit de 2x16GB RGB', 520000, 20, 3),\n  ('SSD NVMe 1TB Gen4', 'Disco sólido con lectura de 7000 MB/s', 420000, 25, 4),\n  ('Motherboard B650M', 'Placa base AM5 micro-ATX', 750000, 10, 5);\n\n-- ============================================\n-- TABLA: servicios\n-- ============================================\nCREATE TABLE IF NOT EXISTS servicios (\n  id INT AUTO_INCREMENT PRIMARY KEY,\n  nombre VARCHAR(100) NOT NULL,\n  descripcion TEXT,\n  precio DECIMAL(12,2) NOT NULL,\n  duracion_estimada VARCHAR(50),\n  imagen_url VARCHAR(255),\n  estado ENUM('activo', 'inactivo') DEFAULT 'activo',\n  fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP\n);\n\nINSERT INTO servicios (nombre, descripcion, precio, duracion_estimada) VALUES\n  ('Ensamblaje de PC', 'Armado completo de computador de escritorio', 80000, '2-3 horas'),\n  ('Instalación de Software', 'Instalación de sistema operativo y programas', 40000, '1-2 horas'),\n  ('Mantenimiento Preventivo', 'Limpieza interna y optimización del sistema', 50000, '1-2 horas'),\n  ('Diagnóstico Técnico', 'Revisión completa del estado del equipo', 30000, '1 hora'),\n  ('Actualización de Componentes', 'Cambio o mejora de hardware', 60000, '1-3 horas');",
+  "main_py": "\"\"\"\nAplicación principal de la API TechPC construida con FastAPI.\n\nArquitectura:  React + Vite  →  FastAPI  →  Base de Datos SQL (MySQL)\n\nLa documentación automática (Swagger UI) queda disponible en:\n    http://127.0.0.1:8000/docs\n\"\"\"\nfrom fastapi import FastAPI\nfrom fastapi.middleware.cors import CORSMiddleware\n\nfrom .routers import auth, productos, servicios, usuarios\n\napp = FastAPI(\n    title='TechPC API - FastAPI',\n    description=(\n        'API REST del proyecto TechPC (cuarto avance). '\n        'Autenticación JWT, hashing de contraseñas, control de roles '\n        'y operaciones CRUD sobre la base de datos SQL.'\n    ),\n    version='1.0.0',\n)\n\n# CORS: permite la comunicación del Frontend (React + Vite) con la API\napp.add_middleware(\n    CORSMiddleware,\n    allow_origins=['*'],  # En producción restringir a los orígenes permitidos\n    allow_credentials=False,\n    allow_methods=['*'],\n    allow_headers=['*'],\n)\n\n# Endpoint raíz de verificación\n@app.get('/')\ndef root():\n    return {'message': 'API TechPC (FastAPI) funcionando correctamente 🚀'}\n\n\n# Routers\napp.include_router(auth.router)\napp.include_router(usuarios.router)\napp.include_router(productos.router)\napp.include_router(servicios.router)",
+  "config_py": "\"\"\"\nConfiguración central de la API.\nLas variables sensibles se leen desde el archivo .env (nunca se exponen en el código).\n\"\"\"\nimport os\n\nfrom dotenv import load_dotenv\n\n# Cargar variables de entorno desde el archivo .env\nload_dotenv()\n\n# ─── Base de datos ───\nDB_HOST = os.getenv('DB_HOST', 'localhost')\nDB_USER = os.getenv('DB_USER', 'root')\nDB_PASSWORD = os.getenv('DB_PASSWORD', '')\nDB_NAME = os.getenv('DB_NAME', 'techpc_db')\nDB_PORT = int(os.getenv('DB_PORT', '3306'))\n\n# URL de conexión SQLAlchemy con PyMySQL\nDATABASE_URL = f'mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}?charset=utf8mb4'\n\n# ─── Servidor ───\nPORT = int(os.getenv('PORT', '8000'))\n\n# ─── Seguridad (JWT) ───\nJWT_SECRET = os.getenv('JWT_SECRET', 'cambia_este_secreto_en_produccion')\nJWT_ALGORITHM = 'HS256'\nJWT_EXPIRATION_MINUTES = 60 * 24  # 24 horas",
+  "database_py": "\"\"\"\nConexión con la base de datos SQL mediante SQLAlchemy.\nLa configuración proviene de variables de entorno (app/config.py).\n\"\"\"\nfrom sqlalchemy import create_engine\nfrom sqlalchemy.orm import declarative_base, sessionmaker\n\nfrom .config import DATABASE_URL\n\n# Motor de conexión (pool por defecto)\nengine = create_engine(\n    DATABASE_URL,\n    pool_pre_ping=True,      # Verifica la conexión antes de usarla\n    pool_recycle=3600,       # Recicla conexiones cada hora\n)\n\n# Fábrica de sesiones\nSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)\n\n# Base para los modelos ORM\nBase = declarative_base()\n\n\ndef get_db():\n    \"\"\"Dependencia de FastAPI: entrega una sesión de BD por petición.\"\"\"\n    db = SessionLocal()\n    try:\n        yield db\n    finally:\n        db.close()",
+  "models_py": "\"\"\"\nModelos ORM (SQLAlchemy) que representan las tablas de la base de datos.\nLa estructura es idéntica a la definida en database.sql.\n\"\"\"\nfrom sqlalchemy import (\n    Column,\n    DateTime,\n    DECIMAL,\n    Enum,\n    ForeignKey,\n    Integer,\n    String,\n    Table,\n    Text,\n    func,\n)\nfrom sqlalchemy.orm import relationship\n\nfrom .database import Base\n\n\n# ─── Tabla intermedia: rol_permisos ───\nrol_permisos = Table(\n    'rol_permisos',\n    Base.metadata,\n    Column('rol_id', Integer, ForeignKey('roles.id'), primary_key=True),\n    Column('permiso_id', Integer, ForeignKey('permisos.id'), primary_key=True),\n)\n\n\nclass Rol(Base):\n    __tablename__ = 'roles'\n\n    id = Column(Integer, primary_key=True, index=True)\n    nombre = Column(String(30), unique=True, nullable=False)\n    descripcion = Column(String(100))\n\n    permisos = relationship('Permiso', secondary=rol_permisos, backref='roles')\n\n\nclass Permiso(Base):\n    __tablename__ = 'permisos'\n\n    id = Column(Integer, primary_key=True, index=True)\n    nombre = Column(String(50), unique=True, nullable=False)\n    descripcion = Column(String(150))\n\n\nclass Usuario(Base):\n    __tablename__ = 'usuarios'\n\n    id = Column(Integer, primary_key=True, index=True)\n    nombre = Column(String(50), nullable=False)\n    apellido = Column(String(50), nullable=False)\n    tipo_documento = Column(String(5), nullable=False)\n    numero_documento = Column(String(12), unique=True, nullable=False)\n    direccion = Column(String(80), nullable=False)\n    telefono = Column(String(16), nullable=False)\n    correo = Column(String(80), unique=True, nullable=False, index=True)\n    contrasena = Column(String(255), nullable=False)  # Solo se almacena el hash\n    rol_id = Column(Integer, ForeignKey('roles.id'), nullable=False, default=3)\n    estado = Column(Enum('activo', 'inactivo'), default='activo', nullable=False)\n    fecha_registro = Column(DateTime, server_default=func.now())\n\n    rol = relationship('Rol', lazy='joined')\n\n\nclass CategoriaProducto(Base):\n    __tablename__ = 'categorias_productos'\n\n    id = Column(Integer, primary_key=True, index=True)\n    nombre = Column(String(50), nullable=False)\n    descripcion = Column(String(150))\n\n\nclass Producto(Base):\n    __tablename__ = 'productos'\n\n    id = Column(Integer, primary_key=True, index=True)\n    nombre = Column(String(100), nullable=False)\n    descripcion = Column(Text)\n    precio = Column(DECIMAL(12, 2), nullable=False)\n    stock = Column(Integer, nullable=False, default=0)\n    imagen_url = Column(String(255))\n    categoria_id = Column(Integer, ForeignKey('categorias_productos.id'))\n    estado = Column(Enum('activo', 'inactivo'), default='activo', nullable=False)\n    fecha_creacion = Column(DateTime, server_default=func.now())\n\n    categoria = relationship('CategoriaProducto', lazy='joined')\n\n\nclass Servicio(Base):\n    __tablename__ = 'servicios'\n\n    id = Column(Integer, primary_key=True, index=True)\n    nombre = Column(String(100), nullable=False)\n    descripcion = Column(Text)\n    precio = Column(DECIMAL(12, 2), nullable=False)\n    duracion_estimada = Column(String(50))\n    imagen_url = Column(String(255))\n    estado = Column(Enum('activo', 'inactivo'), default='activo', nullable=False)\n    fecha_creacion = Column(DateTime, server_default=func.now())",
+  "schemas_py": "\"\"\"\nEsquemas (Pydantic) para validar los datos recibidos por la API.\nDiferenciados de los modelos ORM: aquí se validan tipos, campos\nobligatorios, longitudes, formatos, correos y contraseñas.\n\"\"\"\nimport re\n\nfrom pydantic import BaseModel, EmailStr, Field, field_validator\n\n# ─── Expresiones regulares de validación ───\nDOCUMENTO_RE = re.compile(r'^\\d{6,12}$')\nTELEFONO_RE = re.compile(r'^[0-9+\\-\\s]{7,16}$')\nCONTRASENA_RE = re.compile(r'^(?=.*[A-Za-z])(?=.*\\d)(?=.*[^\\w\\s]).{8,}$')\n# Al menos una letra, un número y un carácter especial, mínimo 8 caracteres\n\n\n# ════════════════════════════════════════════\n# Autenticación\n# ════════════════════════════════════════════\n\nclass LoginRequest(BaseModel):\n    email: EmailStr\n    contrasena: str = Field(min_length=1, max_length=255)\n\n\nclass LoginResponse(BaseModel):\n    message: str\n    token: str\n    user: dict\n\n\n# ════════════════════════════════════════════\n# Usuarios\n# ════════════════════════════════════════════\n\nclass UsuarioRegistro(BaseModel):\n    \"\"\"El Frontend envía tipoDocumento/numeroDocumento (camelCase);\n    también se aceptan los nombres de columna en snake_case.\"\"\"\n    nombre: str = Field(min_length=2, max_length=50)\n    apellido: str = Field(min_length=2, max_length=50)\n    tipo_documento: str = Field(min_length=2, max_length=5, validation_alias='tipoDocumento', serialization_alias='tipoDocumento')\n    numero_documento: str = Field(min_length=6, max_length=12, validation_alias='numeroDocumento', serialization_alias='numeroDocumento')\n    direccion: str = Field(min_length=5, max_length=80)\n    telefono: str = Field(min_length=7, max_length=16)\n    correo: EmailStr\n    contrasena: str = Field(min_length=8, max_length=255)\n\n    model_config = {'populate_by_name': True}\n\n    @field_validator('nombre', 'apellido')\n    @classmethod\n    def solo_letras(cls, v, info):\n        if not re.match(r'^[A-Za-zÁÉÍÓÚáéíóúÑñÜü\\s\\'-]+$', v):\n            raise ValueError(f'{info.field_name.capitalize()} solo puede contener letras.')\n        return v.strip()\n\n    @field_validator('tipo_documento')\n    @classmethod\n    def tipo_documento_valido(cls, v):\n        if v.upper() not in {'CC', 'TI', 'CE', 'PP', 'NIT'}:\n            raise ValueError('Tipo de documento no válido (CC, TI, CE, PP, NIT).')\n        return v.upper()\n\n    @field_validator('numero_documento')\n    @classmethod\n    def numero_documento_valido(cls, v):\n        if not DOCUMENTO_RE.match(v):\n            raise ValueError('Número de documento debe tener entre 6 y 12 dígitos.')\n        return v\n\n    @field_validator('telefono')\n    @classmethod\n    def telefono_valido(cls, v):\n        if not TELEFONO_RE.match(v):\n            raise ValueError('Teléfono no válido (7 a 16 caracteres: dígitos, +, - o espacios).')\n        return v\n\n    @field_validator('contrasena')\n    @classmethod\n    def contrasena_valida(cls, v):\n        if not CONTRASENA_RE.match(v):\n            raise ValueError('La contraseña debe tener mínimo 8 caracteres, incluir una letra, un número y un carácter especial.')\n        return v\n\n\nclass UsuarioUpdate(BaseModel):\n    \"\"\"Todos los campos opcionales para la edición de usuarios.\"\"\"\n    nombre: str | None = Field(default=None, min_length=2, max_length=50)\n    apellido: str | None = Field(default=None, min_length=2, max_length=50)\n    tipo_documento: str | None = Field(default=None, min_length=2, max_length=5)\n    numero_documento: str | None = Field(default=None, min_length=6, max_length=12)\n    direccion: str | None = Field(default=None, min_length=5, max_length=80)\n    telefono: str | None = Field(default=None, min_length=7, max_length=16)\n    correo: EmailStr | None = None\n    contrasena: str | None = Field(default=None, min_length=8, max_length=255)\n    rol_id: int | None = None\n    estado: str | None = None\n\n    @field_validator('estado')\n    @classmethod\n    def estado_valido(cls, v):\n        if v is not None and v not in {'activo', 'inactivo'}:\n            raise ValueError(\"El estado debe ser 'activo' o 'inactivo'.\")\n        return v\n\n    @field_validator('rol_id')\n    @classmethod\n    def rol_valido(cls, v):\n        if v is not None and v not in {1, 2, 3}:\n            raise ValueError('Rol no válido.')\n        return v\n\n\nclass UsuarioOut(BaseModel):\n    \"\"\"Representación de un usuario sin contraseña.\"\"\"\n    id: int\n    nombre: str\n    apellido: str\n    tipo_documento: str | None = None\n    numero_documento: str | None = None\n    direccion: str | None = None\n    telefono: str | None = None\n    correo: str\n    estado: str\n    rol_id: int\n    rol_nombre: str | None = None\n    fecha_registro: object | None = None\n\n    model_config = {'from_attributes': True}\n\n\nclass EstadoUpdate(BaseModel):\n    estado: str = Field(pattern='^(activo|inactivo)$')\n\n\n# ════════════════════════════════════════════\n# Roles y permisos\n# ════════════════════════════════════════════\n\nclass RolOut(BaseModel):\n    id: int\n    nombre: str\n    descripcion: str | None = None\n\n    model_config = {'from_attributes': True}\n\n\n# ════════════════════════════════════════════\n# Productos\n# ════════════════════════════════════════════\n\nclass ProductoBase(BaseModel):\n    nombre: str = Field(min_length=2, max_length=100)\n    descripcion: str | None = Field(default=None, max_length=1000)\n    precio: float = Field(gt=0, le=999999999999.99)\n    stock: int = Field(ge=0, le=1000000)\n    imagen_url: str | None = Field(default=None, max_length=255)\n    categoria_id: int | None = None\n\n\nclass ProductoCreate(ProductoBase):\n    pass\n\n\nclass ProductoUpdate(BaseModel):\n    nombre: str | None = Field(default=None, min_length=2, max_length=100)\n    descripcion: str | None = Field(default=None, max_length=1000)\n    precio: float | None = Field(default=None, gt=0)\n    stock: int | None = Field(default=None, ge=0)\n    imagen_url: str | None = Field(default=None, max_length=255)\n    categoria_id: int | None = None\n    estado: str | None = Field(default=None, pattern='^(activo|inactivo)$')\n\n\nclass ProductoOut(BaseModel):\n    id: int\n    nombre: str\n    descripcion: str | None = None\n    precio: float\n    stock: int\n    imagen_url: str | None = None\n    categoria_id: int | None = None\n    categoria_nombre: str | None = None\n    estado: str\n    fecha_creacion: object | None = None\n\n    model_config = {'from_attributes': True}\n\n\nclass CategoriaOut(BaseModel):\n    id: int\n    nombre: str\n    descripcion: str | None = None\n\n    model_config = {'from_attributes': True}\n\n\n# ════════════════════════════════════════════\n# Servicios\n# ════════════════════════════════════════════\n\nclass ServicioBase(BaseModel):\n    nombre: str = Field(min_length=2, max_length=100)\n    descripcion: str | None = Field(default=None, max_length=1000)\n    precio: float = Field(gt=0, le=999999999999.99)\n    duracion_estimada: str | None = Field(default=None, max_length=50)\n    imagen_url: str | None = Field(default=None, max_length=255)\n\n\nclass ServicioCreate(ServicioBase):\n    pass\n\n\nclass ServicioUpdate(BaseModel):\n    nombre: str | None = Field(default=None, min_length=2, max_length=100)\n    descripcion: str | None = Field(default=None, max_length=1000)\n    precio: float | None = Field(default=None, gt=0)\n    duracion_estimada: str | None = Field(default=None, max_length=50)\n    imagen_url: str | None = Field(default=None, max_length=255)\n    estado: str | None = Field(default=None, pattern='^(activo|inactivo)$')\n\n\nclass ServicioOut(BaseModel):\n    id: int\n    nombre: str\n    descripcion: str | None = None\n    precio: float\n    duracion_estimada: str | None = None\n    imagen_url: str | None = None\n    estado: str\n    fecha_creacion: object | None = None\n\n    model_config = {'from_attributes': True}",
+  "security_py": "\"\"\"\nSeguridad: hashing de contraseñas (bcrypt), generación/verificación de JWT\ny dependencias de FastAPI para proteger endpoints y controlar roles.\n\"\"\"\nfrom datetime import datetime, timedelta, timezone\n\nimport bcrypt\nfrom fastapi import Depends, HTTPException, status\nfrom fastapi.security import HTTPAuthorizationCredentials, HTTPBearer\nfrom jose import JWTError, jwt\nfrom sqlalchemy.orm import Session\n\nfrom .config import JWT_ALGORITHM, JWT_EXPIRATION_MINUTES, JWT_SECRET\nfrom .database import get_db\nfrom .models import Usuario\n\n# Esquema Bearer para leer el header Authorization: Bearer <token>\nsecurity_scheme = HTTPBearer(auto_error=False)\n\n\n# ─── Hashing de contraseñas ───\ndef hash_password(contrasena: str) -> str:\n    \"\"\"Genera un hash seguro con bcrypt (nunca se guarda la contraseña en texto plano).\"\"\"\n    salt = bcrypt.gensalt(rounds=10)\n    return bcrypt.hashpw(contrasena.encode('utf-8'), salt).decode('utf-8')\n\n\ndef verify_password(contrasena: str, hashed: str) -> bool:\n    \"\"\"Verifica una contraseña contra su hash almacenado.\"\"\"\n    try:\n        return bcrypt.checkpw(contrasena.encode('utf-8'), hashed.encode('utf-8'))\n    except (ValueError, TypeError):\n        return False\n\n\n# ─── JWT ───\ndef create_access_token(data: dict, expires_minutes: int | None = None) -> str:\n    \"\"\"Crea un token JWT con la información del usuario.\"\"\"\n    to_encode = data.copy()\n    expire = datetime.now(timezone.utc) + timedelta(\n        minutes=expires_minutes or JWT_EXPIRATION_MINUTES\n    )\n    to_encode.update({'exp': expire})\n    return jwt.encode(to_encode, JWT_SECRET, algorithm=JWT_ALGORITHM)\n\n\ndef decode_access_token(token: str) -> dict:\n    \"\"\"Decodifica y valida un token JWT (firma y expiración).\"\"\"\n    try:\n        return jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])\n    except JWTError as exc:\n        raise HTTPException(\n            status_code=status.HTTP_401_UNAUTHORIZED,\n            detail='Token inválido o expirado.',\n        ) from exc\n\n\n# ─── Dependencia: usuario autenticado ───\ndef get_current_user(\n    credentials: HTTPAuthorizationCredentials = Depends(security_scheme),\n    db: Session = Depends(get_db),\n) -> Usuario:\n    \"\"\"\n    Verifica que la petición incluya un token válido y devuelve el usuario\n    asociado. Protege los endpoints que requieren autenticación.\n    \"\"\"\n    if credentials is None or credentials.credentials is None:\n        raise HTTPException(\n            status_code=status.HTTP_401_UNAUTHORIZED,\n            detail='Token no proporcionado.',\n        )\n\n    payload = decode_access_token(credentials.credentials)\n\n    user_id = payload.get('sub')\n    if user_id is None:\n        raise HTTPException(\n            status_code=status.HTTP_401_UNAUTHORIZED,\n            detail='Token inválido o expirado.',\n        )\n\n    user = db.query(Usuario).filter(Usuario.id == int(user_id)).first()\n    if user is None:\n        raise HTTPException(\n            status_code=status.HTTP_401_UNAUTHORIZED,\n            detail='Usuario no encontrado.',\n        )\n    if user.estado != 'activo':\n        raise HTTPException(\n            status_code=status.HTTP_403_FORBIDDEN,\n            detail='Tu cuenta está desactivada. Contacta al administrador.',\n        )\n    return user\n\n\n# ─── Dependencia: control de roles ───\ndef require_roles(*roles: str):\n    \"\"\"\n    Devuelve una dependencia que solo permite el acceso a usuarios cuyo rol\n    esté entre los indicados. La autorización definitiva es del Backend.\n    \"\"\"\n    def checker(current_user: Usuario = Depends(get_current_user)) -> Usuario:\n        if current_user.rol is None or current_user.rol.nombre not in roles:\n            raise HTTPException(\n                status_code=status.HTTP_403_FORBIDDEN,\n                detail='No tienes permiso para realizar esta acción.',\n            )\n        return current_user\n    return checker\n\n\ndef usuario_a_dict(usuario: Usuario) -> dict:\n    \"\"\"Convierte un usuario ORM a diccionario seguro (sin contraseña).\"\"\"\n    return {\n        'id': usuario.id,\n        'nombre': usuario.nombre,\n        'apellido': usuario.apellido,\n        'tipo_documento': usuario.tipo_documento,\n        'numero_documento': usuario.numero_documento,\n        'direccion': usuario.direccion,\n        'telefono': usuario.telefono,\n        'correo': usuario.correo,\n        'estado': usuario.estado,\n        'rol_id': usuario.rol_id,\n        'rol_nombre': usuario.rol.nombre if usuario.rol else None,\n        'fecha_registro': usuario.fecha_registro,\n    }",
+  "router_auth": "\"\"\"\nRutas de autenticación: /api/auth\n- POST /api/auth/login   → verifica credenciales y genera JWT\n- GET  /api/auth/me      → perfil del usuario autenticado (protegido)\n- GET  /api/auth/roles   → lista de roles (protegido)\n\"\"\"\nfrom fastapi import APIRouter, Depends, HTTPException, status\nfrom sqlalchemy.orm import Session\n\nfrom ..database import get_db\nfrom ..models import Rol, Usuario\nfrom ..schemas import LoginRequest, LoginResponse, RolOut, UsuarioOut\nfrom ..security import (\n    create_access_token,\n    get_current_user,\n    usuario_a_dict,\n    verify_password,\n)\n\nrouter = APIRouter(prefix='/api/auth', tags=['Autenticación'])\n\n\n@router.post('/login', response_model=LoginResponse)\ndef login(body: LoginRequest, db: Session = Depends(get_db)):\n    \"\"\"Inicio de sesión: valida correo y contraseña y retorna un JWT.\"\"\"\n    user = db.query(Usuario).filter(Usuario.correo == body.email.lower().strip()).first()\n    if user is None:\n        raise HTTPException(\n            status_code=status.HTTP_401_UNAUTHORIZED,\n            detail='Correo o contraseña incorrectos.',\n        )\n\n    if user.estado != 'activo':\n        raise HTTPException(\n            status_code=status.HTTP_403_FORBIDDEN,\n            detail='Tu cuenta está desactivada. Contacta al administrador.',\n        )\n\n    if not verify_password(body.contrasena, user.contrasena):\n        raise HTTPException(\n            status_code=status.HTTP_401_UNAUTHORIZED,\n            detail='Correo o contraseña incorrectos.',\n        )\n\n    rol_nombre = user.rol.nombre if user.rol else 'cliente'\n    token = create_access_token(\n        {'sub': str(user.id), 'correo': user.correo, 'rol': rol_nombre}\n    )\n\n    return LoginResponse(\n        message='Inicio de sesión exitoso.',\n        token=token,\n        user={\n            'id': user.id,\n            'nombre': user.nombre,\n            'apellido': user.apellido,\n            'correo': user.correo,\n            'rol': rol_nombre,\n            'rol_id': user.rol_id,\n        },\n    )\n\n\n@router.get('/me', response_model=UsuarioOut)\ndef get_me(current_user: Usuario = Depends(get_current_user)):\n    \"\"\"Perfil del usuario autenticado (requiere token).\"\"\"\n    return current_user\n\n\n@router.get('/roles')\ndef get_roles(\n    db: Session = Depends(get_db),\n    _: Usuario = Depends(get_current_user),\n):\n    \"\"\"Lista de roles del sistema (requiere autenticación).\"\"\"\n    roles = db.query(Rol).order_by(Rol.id).all()\n    return {'roles': [RolOut.model_validate(r).model_dump() for r in roles]}",
+  "router_usuarios": "\"\"\"\nRutas de usuarios: /api/usuarios\n- POST   /api/usuarios/registro     → registro de clientes (público)\n- GET    /api/usuarios              → listar usuarios (admin)\n- GET    /api/usuarios/{id}         → consultar usuario (admin)\n- PUT    /api/usuarios/{id}         → actualizar usuario (admin)\n- PATCH  /api/usuarios/{id}/estado  → cambiar estado activo/inactivo (admin)\n- DELETE /api/usuarios/{id}         → eliminar usuario (admin)\n\"\"\"\nfrom fastapi import APIRouter, Depends, HTTPException, status\nfrom sqlalchemy.orm import Session\n\nfrom ..database import get_db\nfrom ..models import Usuario\nfrom ..schemas import EstadoUpdate, UsuarioRegistro, UsuarioUpdate\nfrom ..security import (\n    get_current_user,\n    hash_password,\n    require_roles,\n    usuario_a_dict,\n    verify_password,\n)\n\nrouter = APIRouter(prefix='/api/usuarios', tags=['Usuarios'])\n\n\n@router.post('/registro', status_code=status.HTTP_201_CREATED)\ndef registrar_usuario(body: UsuarioRegistro, db: Session = Depends(get_db)):\n    \"\"\"Registro de un cliente nuevo: valida datos, verifica duplicados\n    y almacena la contraseña con hashing seguro (bcrypt).\"\"\"\n    correo = body.correo.lower().strip()\n\n    existe_correo = db.query(Usuario).filter(Usuario.correo == correo).first()\n    if existe_correo:\n        raise HTTPException(\n            status_code=status.HTTP_409_CONFLICT,\n            detail='El correo ya está registrado.',\n        )\n\n    existe_documento = (\n        db.query(Usuario)\n        .filter(Usuario.numero_documento == body.numero_documento)\n        .first()\n    )\n    if existe_documento:\n        raise HTTPException(\n            status_code=status.HTTP_409_CONFLICT,\n            detail='El número de documento ya está registrado.',\n        )\n\n    nuevo = Usuario(\n        nombre=body.nombre,\n        apellido=body.apellido,\n        tipo_documento=body.tipo_documento,\n        numero_documento=body.numero_documento,\n        direccion=body.direccion,\n        telefono=body.telefono,\n        correo=correo,\n        contrasena=hash_password(body.contrasena),  # Nunca se guarda en texto plano\n        rol_id=3,  # Por defecto: cliente\n        estado='activo',\n    )\n    db.add(nuevo)\n    db.commit()\n    db.refresh(nuevo)\n\n    return {\n        'message': 'Usuario registrado exitosamente.',\n        'user': {\n            'id': nuevo.id,\n            'nombre': nuevo.nombre,\n            'apellido': nuevo.apellido,\n            'correo': nuevo.correo,\n            'rol': 'cliente',\n        },\n    }\n\n\n@router.get('', response_model=dict)\ndef listar_usuarios(\n    db: Session = Depends(get_db),\n    _: Usuario = Depends(require_roles('administrador')),\n):\n    \"\"\"Lista todos los usuarios (solo administrador).\"\"\"\n    usuarios = db.query(Usuario).order_by(Usuario.fecha_registro.desc()).all()\n    return {'users': [usuario_a_dict(u) for u in usuarios]}\n\n\n@router.get('/{usuario_id}', response_model=dict)\ndef obtener_usuario(\n    usuario_id: int,\n    db: Session = Depends(get_db),\n    _: Usuario = Depends(require_roles('administrador')),\n):\n    \"\"\"Consulta un usuario por ID (solo administrador).\"\"\"\n    usuario = db.query(Usuario).filter(Usuario.id == usuario_id).first()\n    if usuario is None:\n        raise HTTPException(\n            status_code=status.HTTP_404_NOT_FOUND,\n            detail='Usuario no encontrado.',\n        )\n    return {'user': usuario_a_dict(usuario)}\n\n\n@router.put('/{usuario_id}')\ndef actualizar_usuario(\n    usuario_id: int,\n    body: UsuarioUpdate,\n    db: Session = Depends(get_db),\n    _: Usuario = Depends(require_roles('administrador')),\n):\n    \"\"\"Actualiza los datos de un usuario (solo administrador).\"\"\"\n    usuario = db.query(Usuario).filter(Usuario.id == usuario_id).first()\n    if usuario is None:\n        raise HTTPException(\n            status_code=status.HTTP_404_NOT_FOUND,\n            detail='Usuario no encontrado.',\n        )\n\n    data = body.model_dump(exclude_unset=True, exclude_none=True)\n\n    # Si llega nueva contraseña, se vuelve a hashear\n    if 'contrasena' in data:\n        if not verify_password(data['contrasena'], usuario.contrasena):\n            data['contrasena'] = hash_password(data['contrasena'])\n        else:\n            del data['contrasena']\n\n    if 'correo' in data:\n        correo = data['correo'].lower().strip()\n        duplicado = (\n            db.query(Usuario)\n            .filter(Usuario.correo == correo, Usuario.id != usuario_id)\n            .first()\n        )\n        if duplicado:\n            raise HTTPException(\n                status_code=status.HTTP_409_CONFLICT,\n                detail='El correo ya está registrado.',\n            )\n        data['correo'] = correo\n\n    if 'numero_documento' in data:\n        duplicado = (\n            db.query(Usuario)\n            .filter(\n                Usuario.numero_documento == data['numero_documento'],\n                Usuario.id != usuario_id,\n            )\n            .first()\n        )\n        if duplicado:\n            raise HTTPException(\n                status_code=status.HTTP_409_CONFLICT,\n                detail='El número de documento ya está registrado.',\n            )\n\n    for campo, valor in data.items():\n        setattr(usuario, campo, valor)\n\n    db.commit()\n    return {'message': 'Usuario actualizado exitosamente.'}\n\n\n@router.patch('/{usuario_id}/estado')\ndef cambiar_estado_usuario(\n    usuario_id: int,\n    body: EstadoUpdate,\n    db: Session = Depends(get_db),\n    _: Usuario = Depends(require_roles('administrador')),\n):\n    \"\"\"Cambia el estado de un usuario a activo/inactivo (solo administrador).\"\"\"\n    usuario = db.query(Usuario).filter(Usuario.id == usuario_id).first()\n    if usuario is None:\n        raise HTTPException(\n            status_code=status.HTTP_404_NOT_FOUND,\n            detail='Usuario no encontrado.',\n        )\n    usuario.estado = body.estado\n    db.commit()\n    return {'message': 'Estado del usuario actualizado.', 'estado': usuario.estado}\n\n\n@router.delete('/{usuario_id}')\ndef eliminar_usuario(\n    usuario_id: int,\n    db: Session = Depends(get_db),\n    _: Usuario = Depends(require_roles('administrador')),\n):\n    \"\"\"Elimina un usuario (solo administrador).\"\"\"\n    usuario = db.query(Usuario).filter(Usuario.id == usuario_id).first()\n    if usuario is None:\n        raise HTTPException(\n            status_code=status.HTTP_404_NOT_FOUND,\n            detail='Usuario no encontrado.',\n        )\n    db.delete(usuario)\n    db.commit()\n    return {'message': 'Usuario eliminado exitosamente.'}",
+  "router_productos": "\"\"\"\nRutas de productos: /api/productos\n- GET    /api/productos                → listar productos (público)\n- GET    /api/productos/categorias     → listar categorías (público)\n- GET    /api/productos/{id}           → consultar producto (público)\n- POST   /api/productos                → crear producto (admin o empleado)\n- PUT    /api/productos/{id}           → actualizar producto (admin o empleado)\n- DELETE /api/productos/{id}           → eliminar producto (solo admin)\n\"\"\"\nfrom fastapi import APIRouter, Depends, HTTPException, status\nfrom sqlalchemy.orm import Session\n\nfrom ..database import get_db\nfrom ..models import CategoriaProducto, Producto, Usuario\nfrom ..schemas import CategoriaOut, ProductoCreate, ProductoOut, ProductoUpdate\nfrom ..security import require_roles\n\nrouter = APIRouter(prefix='/api/productos', tags=['Productos'])\n\n\n@router.get('')\ndef listar_productos(db: Session = Depends(get_db)):\n    \"\"\"Lista todos los productos con su categoría.\"\"\"\n    productos = db.query(Producto).order_by(Producto.fecha_creacion.desc()).all()\n    return {\n        'products': [\n            {\n                **ProductoOut.model_validate(p).model_dump(),\n                'categoria_nombre': p.categoria.nombre if p.categoria else None,\n            }\n            for p in productos\n        ]\n    }\n\n\n@router.get('/categorias')\ndef listar_categorias(db: Session = Depends(get_db)):\n    \"\"\"Lista las categorías de productos.\"\"\"\n    categorias = db.query(CategoriaProducto).order_by(CategoriaProducto.id).all()\n    return {\n        'categories': [\n            CategoriaOut.model_validate(c).model_dump() for c in categorias\n        ]\n    }\n\n\n@router.get('/{producto_id}')\ndef obtener_producto(producto_id: int, db: Session = Depends(get_db)):\n    \"\"\"Consulta un producto por ID.\"\"\"\n    producto = db.query(Producto).filter(Producto.id == producto_id).first()\n    if producto is None:\n        raise HTTPException(\n            status_code=status.HTTP_404_NOT_FOUND,\n            detail='Producto no encontrado.',\n        )\n    data = ProductoOut.model_validate(producto).model_dump()\n    data['categoria_nombre'] = producto.categoria.nombre if producto.categoria else None\n    return {'product': data}\n\n\n@router.post('', status_code=status.HTTP_201_CREATED)\ndef crear_producto(\n    body: ProductoCreate,\n    db: Session = Depends(get_db),\n    _: Usuario = Depends(require_roles('administrador', 'empleado')),\n):\n    \"\"\"Crea un producto nuevo (solo administrador o empleado).\"\"\"\n    producto = Producto(\n        nombre=body.nombre,\n        descripcion=body.descripcion,\n        precio=body.precio,\n        stock=body.stock,\n        imagen_url=body.imagen_url,\n        categoria_id=body.categoria_id,\n        estado='activo',\n    )\n    db.add(producto)\n    db.commit()\n    db.refresh(producto)\n    return {\n        'message': 'Producto creado exitosamente.',\n        'product': {'id': producto.id, 'nombre': producto.nombre, 'precio': float(producto.precio), 'stock': producto.stock},\n    }\n\n\n@router.put('/{producto_id}')\ndef actualizar_producto(\n    producto_id: int,\n    body: ProductoUpdate,\n    db: Session = Depends(get_db),\n    _: Usuario = Depends(require_roles('administrador', 'empleado')),\n):\n    \"\"\"Actualiza un producto (solo administrador o empleado).\"\"\"\n    producto = db.query(Producto).filter(Producto.id == producto_id).first()\n    if producto is None:\n        raise HTTPException(\n            status_code=status.HTTP_404_NOT_FOUND,\n            detail='Producto no encontrado.',\n        )\n    data = body.model_dump(exclude_unset=True, exclude_none=True)\n    for campo, valor in data.items():\n        setattr(producto, campo, valor)\n    db.commit()\n    return {'message': 'Producto actualizado exitosamente.'}\n\n\n@router.delete('/{producto_id}')\ndef eliminar_producto(\n    producto_id: int,\n    db: Session = Depends(get_db),\n    _: Usuario = Depends(require_roles('administrador')),\n):\n    \"\"\"Elimina un producto (solo administrador).\"\"\"\n    producto = db.query(Producto).filter(Producto.id == producto_id).first()\n    if producto is None:\n        raise HTTPException(\n            status_code=status.HTTP_404_NOT_FOUND,\n            detail='Producto no encontrado.',\n        )\n    db.delete(producto)\n    db.commit()\n    return {'message': 'Producto eliminado exitosamente.'}",
+  "router_servicios": "\"\"\"\nRutas de servicios: /api/servicios\n- GET    /api/servicios          → listar servicios (público)\n- GET    /api/servicios/{id}     → consultar servicio (público)\n- POST   /api/servicios          → crear servicio (admin o empleado)\n- PUT    /api/servicios/{id}     → actualizar servicio (admin o empleado)\n- DELETE /api/servicios/{id}     → eliminar servicio (solo admin)\n\"\"\"\nfrom fastapi import APIRouter, Depends, HTTPException, status\nfrom sqlalchemy.orm import Session\n\nfrom ..database import get_db\nfrom ..models import Servicio, Usuario\nfrom ..schemas import ServicioCreate, ServicioOut, ServicioUpdate\nfrom ..security import require_roles\n\nrouter = APIRouter(prefix='/api/servicios', tags=['Servicios'])\n\n\n@router.get('')\ndef listar_servicios(db: Session = Depends(get_db)):\n    \"\"\"Lista todos los servicios.\"\"\"\n    servicios = db.query(Servicio).order_by(Servicio.fecha_creacion.desc()).all()\n    return {\n        'services': [ServicioOut.model_validate(s).model_dump() for s in servicios]\n    }\n\n\n@router.get('/{servicio_id}')\ndef obtener_servicio(servicio_id: int, db: Session = Depends(get_db)):\n    \"\"\"Consulta un servicio por ID.\"\"\"\n    servicio = db.query(Servicio).filter(Servicio.id == servicio_id).first()\n    if servicio is None:\n        raise HTTPException(\n            status_code=status.HTTP_404_NOT_FOUND,\n            detail='Servicio no encontrado.',\n        )\n    return {'service': ServicioOut.model_validate(servicio).model_dump()}\n\n\n@router.post('', status_code=status.HTTP_201_CREATED)\ndef crear_servicio(\n    body: ServicioCreate,\n    db: Session = Depends(get_db),\n    _: Usuario = Depends(require_roles('administrador', 'empleado')),\n):\n    \"\"\"Crea un servicio nuevo (solo administrador o empleado).\"\"\"\n    servicio = Servicio(\n        nombre=body.nombre,\n        descripcion=body.descripcion,\n        precio=body.precio,\n        duracion_estimada=body.duracion_estimada,\n        imagen_url=body.imagen_url,\n        estado='activo',\n    )\n    db.add(servicio)\n    db.commit()\n    db.refresh(servicio)\n    return {\n        'message': 'Servicio creado exitosamente.',\n        'service': {'id': servicio.id, 'nombre': servicio.nombre, 'precio': float(servicio.precio)},\n    }\n\n\n@router.put('/{servicio_id}')\ndef actualizar_servicio(\n    servicio_id: int,\n    body: ServicioUpdate,\n    db: Session = Depends(get_db),\n    _: Usuario = Depends(require_roles('administrador', 'empleado')),\n):\n    \"\"\"Actualiza un servicio (solo administrador o empleado).\"\"\"\n    servicio = db.query(Servicio).filter(Servicio.id == servicio_id).first()\n    if servicio is None:\n        raise HTTPException(\n            status_code=status.HTTP_404_NOT_FOUND,\n            detail='Servicio no encontrado.',\n        )\n    data = body.model_dump(exclude_unset=True, exclude_none=True)\n    for campo, valor in data.items():\n        setattr(servicio, campo, valor)\n    db.commit()\n    return {'message': 'Servicio actualizado exitosamente.'}\n\n\n@router.delete('/{servicio_id}')\ndef eliminar_servicio(\n    servicio_id: int,\n    db: Session = Depends(get_db),\n    _: Usuario = Depends(require_roles('administrador')),\n):\n    \"\"\"Elimina un servicio (solo administrador).\"\"\"\n    servicio = db.query(Servicio).filter(Servicio.id == servicio_id).first()\n    if servicio is None:\n        raise HTTPException(\n            status_code=status.HTTP_404_NOT_FOUND,\n            detail='Servicio no encontrado.',\n        )\n    db.delete(servicio)\n    db.commit()\n    return {'message': 'Servicio eliminado exitosamente.'}",
+  "coleccion_postman": {
+    "info": {
+      "name": "TechPC API - FastAPI (Cuarto Avance)",
+      "description": "API de TechPC con backend FastAPI (Python).\n\nBase URL: http://localhost:8000/api\nDocumentación Swagger: http://127.0.0.1:8000/docs\n\n─── CÓMO USAR ───\n1. Importa este archivo en Postman.\n2. Importa el environment TechPC_FastAPI.postman_environment.json.\n3. Selecciona el environment 'TechPC FastAPI - Local'.\n4. Ejecuta 'Login' para obtener el token JWT (se guarda automáticamente).\n5. Las demás peticiones protegidas lo usan automáticamente.\n\n─── CREDENCIALES DE PRUEBA ───\nAdmin: admin@techpc.com / Admin123*\n\n─── PERMISOS ───\n❌ = Pública (no requiere token)\n🔐 = Requiere token JWT\n👑 = Solo administrador\n🔧 = Admin o empleado",
+      "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "variable": [
+      {
+        "key": "baseUrl",
+        "value": "http://localhost:8000/api"
+      },
+      {
+        "key": "token",
+        "value": ""
+      },
+      {
+        "key": "userId",
+        "value": ""
+      },
+      {
+        "key": "productId",
+        "value": ""
+      },
+      {
+        "key": "serviceId",
+        "value": ""
+      }
+    ],
+    "item": [
+      {
+        "name": "🏥 Health Check",
+        "description": "Verificar que el servidor FastAPI está funcionando.",
+        "item": [
+          {
+            "name": "Root - API Status",
+            "request": {
+              "method": "GET",
+              "url": {
+                "raw": "http://localhost:8000/",
+                "host": [
+                  "http://localhost:8000"
+                ],
+                "path": [
+                  ""
+                ]
+              }
+            },
+            "response": []
+          },
+          {
+            "name": "Swagger Docs (navegador)",
+            "request": {
+              "method": "GET",
+              "url": {
+                "raw": "http://127.0.0.1:8000/docs",
+                "host": [
+                  "http://127.0.0.1:8000"
+                ],
+                "path": [
+                  "docs"
+                ]
+              }
+            },
+            "response": []
+          }
+        ]
+      },
+      {
+        "name": "🔐 Autenticación y Usuarios",
+        "description": "Registro, login JWT y gestión de usuarios.",
+        "item": [
+          {
+            "name": "Registrar usuario (cliente) ❌",
+            "request": {
+              "method": "POST",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": {
+                "mode": "raw",
+                "raw": "{\n  \"nombre\": \"Juan\",\n  \"apellido\": \"Pérez\",\n  \"tipoDocumento\": \"CC\",\n  \"numeroDocumento\": \"1098765432\",\n  \"direccion\": \"Cra 10 # 20-30, Bogotá\",\n  \"telefono\": \"3101234567\",\n  \"correo\": \"juan@ejemplo.com\",\n  \"contrasena\": \"MiPass123*\"\n}"
+              },
+              "url": {
+                "raw": "{{baseUrl}}/usuarios/registro",
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "path": [
+                  "usuarios",
+                  "registro"
+                ]
+              }
+            },
+            "response": []
+          },
+          {
+            "name": "Login (genera JWT) ❌",
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "exec": [
+                    "var data = pm.response.json();",
+                    "if (data.token) {",
+                    "  pm.collectionVariables.set('token', data.token);",
+                    "  if (data.user) {",
+                    "    pm.collectionVariables.set('userId', data.user.id);",
+                    "  }",
+                    "  pm.test('Login exitoso - JWT generado', function () { pm.expect(data.token).to.be.a('string'); });",
+                    "  console.log('✅ Token guardado. Rol: ' + (data.user ? data.user.rol : 'N/A'));",
+                    "} else {",
+                    "  console.error('❌ No se recibió token.');",
+                    "}"
+                  ],
+                  "type": "text/javascript"
+                }
+              }
+            ],
+            "request": {
+              "method": "POST",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": {
+                "mode": "raw",
+                "raw": "{\n  \"email\": \"admin@techpc.com\",\n  \"contrasena\": \"Admin123*\"\n}"
+              },
+              "url": {
+                "raw": "{{baseUrl}}/auth/login",
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "path": [
+                  "auth",
+                  "login"
+                ]
+              }
+            },
+            "response": []
+          },
+          {
+            "name": "Mi perfil (me) 🔐",
+            "request": {
+              "method": "GET",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{token}}"
+                }
+              ],
+              "url": {
+                "raw": "{{baseUrl}}/auth/me",
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "path": [
+                  "auth",
+                  "me"
+                ]
+              }
+            },
+            "response": []
+          },
+          {
+            "name": "Listar roles 🔐",
+            "request": {
+              "method": "GET",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{token}}"
+                }
+              ],
+              "url": {
+                "raw": "{{baseUrl}}/auth/roles",
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "path": [
+                  "auth",
+                  "roles"
+                ]
+              }
+            },
+            "response": []
+          },
+          {
+            "name": "Listar usuarios 👑",
+            "request": {
+              "method": "GET",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{token}}"
+                }
+              ],
+              "url": {
+                "raw": "{{baseUrl}}/usuarios",
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "path": [
+                  "usuarios"
+                ]
+              }
+            },
+            "response": []
+          },
+          {
+            "name": "Consultar usuario por ID 👑",
+            "request": {
+              "method": "GET",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{token}}"
+                }
+              ],
+              "url": {
+                "raw": "{{baseUrl}}/usuarios/{{userId}}",
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "path": [
+                  "usuarios",
+                  "{{userId}}"
+                ]
+              }
+            },
+            "response": []
+          },
+          {
+            "name": "Actualizar usuario 👑",
+            "request": {
+              "method": "PUT",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{token}}"
+                }
+              ],
+              "body": {
+                "mode": "raw",
+                "raw": "{\n  \"nombre\": \"Juan\",\n  \"apellido\": \"Pérez Updated\",\n  \"rol_id\": 2\n}"
+              },
+              "url": {
+                "raw": "{{baseUrl}}/usuarios/{{userId}}",
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "path": [
+                  "usuarios",
+                  "{{userId}}"
+                ]
+              }
+            },
+            "response": []
+          },
+          {
+            "name": "Cambiar estado (activo/inactivo) 👑",
+            "request": {
+              "method": "PATCH",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{token}}"
+                }
+              ],
+              "body": {
+                "mode": "raw",
+                "raw": "{\n  \"estado\": \"inactivo\"\n}"
+              },
+              "url": {
+                "raw": "{{baseUrl}}/usuarios/{{userId}}/estado",
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "path": [
+                  "usuarios",
+                  "{{userId}}",
+                  "estado"
+                ]
+              }
+            },
+            "response": []
+          },
+          {
+            "name": "Eliminar usuario 👑",
+            "request": {
+              "method": "DELETE",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{token}}"
+                }
+              ],
+              "url": {
+                "raw": "{{baseUrl}}/usuarios/{{userId}}",
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "path": [
+                  "usuarios",
+                  "{{userId}}"
+                ]
+              }
+            },
+            "response": []
+          },
+          {
+            "name": "⚠️ Endpoint protegido SIN token (esperado 401)",
+            "request": {
+              "method": "GET",
+              "url": {
+                "raw": "{{baseUrl}}/usuarios",
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "path": [
+                  "usuarios"
+                ]
+              }
+            },
+            "response": []
+          }
+        ]
+      },
+      {
+        "name": "📦 Productos",
+        "description": "CRUD del catálogo de productos.",
+        "item": [
+          {
+            "name": "Listar productos ❌",
+            "request": {
+              "method": "GET",
+              "url": {
+                "raw": "{{baseUrl}}/productos",
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "path": [
+                  "productos"
+                ]
+              }
+            },
+            "response": []
+          },
+          {
+            "name": "Consultar producto por ID ❌",
+            "request": {
+              "method": "GET",
+              "url": {
+                "raw": "{{baseUrl}}/productos/{{productId}}",
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "path": [
+                  "productos",
+                  "{{productId}}"
+                ]
+              }
+            },
+            "response": []
+          },
+          {
+            "name": "Listar categorías ❌",
+            "request": {
+              "method": "GET",
+              "url": {
+                "raw": "{{baseUrl}}/productos/categorias",
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "path": [
+                  "productos",
+                  "categorias"
+                ]
+              }
+            },
+            "response": []
+          },
+          {
+            "name": "Crear producto 🔧",
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "exec": [
+                    "var data = pm.response.json();",
+                    "if (data.product && data.product.id) {",
+                    "  pm.collectionVariables.set('productId', data.product.id);",
+                    "  console.log('✅ productId guardado: ' + data.product.id);",
+                    "}"
+                  ],
+                  "type": "text/javascript"
+                }
+              }
+            ],
+            "request": {
+              "method": "POST",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{token}}"
+                }
+              ],
+              "body": {
+                "mode": "raw",
+                "raw": "{\n  \"nombre\": \"RTX 5080 16GB\",\n  \"descripcion\": \"Tarjeta gráfica de alto rendimiento para gaming en 4K\",\n  \"precio\": 3500000,\n  \"stock\": 15,\n  \"imagen_url\": \"/images/rtx5080.jpg\",\n  \"categoria_id\": 2\n}"
+              },
+              "url": {
+                "raw": "{{baseUrl}}/productos",
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "path": [
+                  "productos"
+                ]
+              }
+            },
+            "response": []
+          },
+          {
+            "name": "Actualizar producto 🔧",
+            "request": {
+              "method": "PUT",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{token}}"
+                }
+              ],
+              "body": {
+                "mode": "raw",
+                "raw": "{\n  \"nombre\": \"RTX 5080 16GB OC\",\n  \"precio\": 3800000,\n  \"stock\": 10,\n  \"estado\": \"activo\"\n}"
+              },
+              "url": {
+                "raw": "{{baseUrl}}/productos/{{productId}}",
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "path": [
+                  "productos",
+                  "{{productId}}"
+                ]
+              }
+            },
+            "response": []
+          },
+          {
+            "name": "Eliminar producto 👑",
+            "request": {
+              "method": "DELETE",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{token}}"
+                }
+              ],
+              "url": {
+                "raw": "{{baseUrl}}/productos/{{productId}}",
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "path": [
+                  "productos",
+                  "{{productId}}"
+                ]
+              }
+            },
+            "response": []
+          }
+        ]
+      },
+      {
+        "name": "🔧 Servicios",
+        "description": "CRUD del catálogo de servicios.",
+        "item": [
+          {
+            "name": "Listar servicios ❌",
+            "request": {
+              "method": "GET",
+              "url": {
+                "raw": "{{baseUrl}}/servicios",
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "path": [
+                  "servicios"
+                ]
+              }
+            },
+            "response": []
+          },
+          {
+            "name": "Consultar servicio por ID ❌",
+            "request": {
+              "method": "GET",
+              "url": {
+                "raw": "{{baseUrl}}/servicios/{{serviceId}}",
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "path": [
+                  "servicios",
+                  "{{serviceId}}"
+                ]
+              }
+            },
+            "response": []
+          },
+          {
+            "name": "Crear servicio 🔧",
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "exec": [
+                    "var data = pm.response.json();",
+                    "if (data.service && data.service.id) {",
+                    "  pm.collectionVariables.set('serviceId', data.service.id);",
+                    "  console.log('✅ serviceId guardado: ' + data.service.id);",
+                    "}"
+                  ],
+                  "type": "text/javascript"
+                }
+              }
+            ],
+            "request": {
+              "method": "POST",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{token}}"
+                }
+              ],
+              "body": {
+                "mode": "raw",
+                "raw": "{\n  \"nombre\": \"Instalación de Windows 11\",\n  \"descripcion\": \"Instalación limpia de Windows 11 con controladores y actualizaciones\",\n  \"precio\": 50000,\n  \"duracion_estimada\": \"1-2 horas\",\n  \"imagen_url\": \"/images/servicio-windows.jpg\"\n}"
+              },
+              "url": {
+                "raw": "{{baseUrl}}/servicios",
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "path": [
+                  "servicios"
+                ]
+              }
+            },
+            "response": []
+          },
+          {
+            "name": "Actualizar servicio 🔧",
+            "request": {
+              "method": "PUT",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                },
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{token}}"
+                }
+              ],
+              "body": {
+                "mode": "raw",
+                "raw": "{\n  \"nombre\": \"Instalación de Windows 11 Pro\",\n  \"precio\": 60000,\n  \"duracion_estimada\": \"2 horas\"\n}"
+              },
+              "url": {
+                "raw": "{{baseUrl}}/servicios/{{serviceId}}",
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "path": [
+                  "servicios",
+                  "{{serviceId}}"
+                ]
+              }
+            },
+            "response": []
+          },
+          {
+            "name": "Eliminar servicio 👑",
+            "request": {
+              "method": "DELETE",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{token}}"
+                }
+              ],
+              "url": {
+                "raw": "{{baseUrl}}/servicios/{{serviceId}}",
+                "host": [
+                  "{{baseUrl}}"
+                ],
+                "path": [
+                  "servicios",
+                  "{{serviceId}}"
+                ]
+              }
+            },
+            "response": []
+          }
+        ]
+      }
+    ]
+  },
+  "arbol": "backend-fastapi/\n  .env\n  .env.example\n  README.md\n  TechPC_FastAPI.postman_collection.json\n  TechPC_FastAPI.postman_environment.json\n  database.sql\n  requirements.txt\n  run.py\n  app/\n    __init__.py\n    config.py\n    database.py\n    main.py\n    models.py\n    schemas.py\n    security.py\n    routers/\n      __init__.py\n      auth.py\n      productos.py\n      servicios.py\n      usuarios.py",
+  "pip_list": "Package           Version\n----------------- -------\nannotated-doc     0.0.5\nannotated-types   0.8.0\nanyio             4.15.1\nbcrypt            5.0.0\ncffi              2.1.1\nclick             8.5.0\ncryptography      50.0.1\ndnspython         2.8.0\necdsa             0.19.2\nemail-validator   2.3.0\nfastapi           0.141.1\ngreenlet          3.5.5\nh11               0.16.0\nhttptools         0.8.0\nidna              3.19\nlxml              6.1.1\npip               25.3\npyasn1            0.6.4\npycparser         3.0\npydantic          2.13.5\npydantic_core     2.46.5\nPyMySQL           1.2.0\npython-docx       1.2.0\npython-dotenv     1.2.3\npython-jose       3.5.0\nPyYAML            6.0.3\nrsa               4.9.1\nsix               1.17.0\nSQLAlchemy        2.0.52\nstarlette         1.6.0\ntyping_extensions 4.16.0\ntyping-inspection 0.4.4\nuvicorn           0.52.4\nwatchfiles        1.2.0\nwebsockets        17.1",
+  "sql_tablas": "+----------------------+\n| Tables_in_techpc_db  |\n+----------------------+\n| categorias_productos |\n| permisos             |\n| productos            |\n| rol_permisos         |\n| roles                |\n| servicios            |\n| usuarios             |\n+----------------------+",
+  "sql_describe": "+------------------+---------------------------+------+-----+---------------------+----------------+\n| Field            | Type                      | Null | Key | Default             | Extra          |\n+------------------+---------------------------+------+-----+---------------------+----------------+\n| id               | int(11)                   | NO   | PRI | NULL                | auto_increment |\n| nombre           | varchar(50)               | NO   |     | NULL                |                |\n| apellido         | varchar(50)               | NO   |     | NULL                |                |\n| tipo_documento   | varchar(5)                | NO   |     | NULL                |                |\n| numero_documento | varchar(12)               | NO   | UNI | NULL                |                |\n| direccion        | varchar(80)               | NO   |     | NULL                |                |\n| telefono         | varchar(16)               | NO   |     | NULL                |                |\n| correo           | varchar(80)               | NO   | UNI | NULL                |                |\n| contrasena       | varchar(255)              | NO   |     | NULL                |                |\n| rol_id           | int(11)                   | NO   | MUL | 3                   |                |\n| estado           | enum('activo','inactivo') | YES  |     | activo              |                |\n| fecha_registro   | timestamp                 | NO   |     | current_timestamp() |                |\n+------------------+---------------------------+------+-----+---------------------+----------------+",
+  "sql_usuarios": "+----+--------+---------------+----------------------+---------------------------+--------+--------+\n| id | nombre | apellido      | correo               | contrasena_hash           | rol_id | estado |\n+----+--------+---------------+----------------------+---------------------------+--------+--------+\n|  1 | Juan   | P�rez Updated | admin@techpc.com     | $2b$10$ZPzZuuyGu4GVP8d... |      1 | activo |\n|  4 | yeison | manuel        | yeison123@gmail.com  | $2b$10$AVemACbKXqkLiF/... |      3 | activo |\n|  6 | Juan   | P�rez         | simon1612@gmail.com  | $2b$10$hAdUNYAT8Uqj.qM... |      3 | activo |\n|  8 | Maria  | Empleada      | empleado@techpc.com  | $2b$10$GNF.u5K/ZDaZAbS... |      2 | activo |\n|  9 | Carlos | Cliente       | cliente@techpc.com   | $2b$10$gA3FM9L1PE5pX6I... |      3 | activo |\n+----+--------+---------------+----------------------+---------------------------+--------+--------+",
+  "sql_roles": "+----+---------------+-------------------------------------+\n| id | nombre        | descripcion                         |\n+----+---------------+-------------------------------------+\n|  1 | administrador | Gesti�n total del sistema           |\n|  2 | empleado      | Gesti�n parcial del sistema         |\n|  3 | cliente       | Acceso a funcionalidades de cliente |\n+----+---------------+-------------------------------------+",
+  "sql_permisos": "+----+--------------------+------------------------------------------------------+\n| id | nombre             | descripcion                                          |\n+----+--------------------+------------------------------------------------------+\n|  1 | gestion_usuarios   | Crear, editar, eliminar y cambiar estado de usuarios |\n|  2 | gestion_productos  | Crear, editar y eliminar productos                   |\n|  3 | gestion_servicios  | Crear, editar y eliminar servicios                   |\n|  4 | ver_panel_admin    | Acceder al panel de administraci�n                   |\n|  5 | ver_panel_empleado | Acceder al panel de empleado                         |\n|  6 | ver_panel_cliente  | Acceder al panel de cliente                          |\n+----+--------------------+------------------------------------------------------+",
+  "sql_rol_permisos": "+--------+------------+\n| rol_id | permiso_id |\n+--------+------------+\n|      1 |          1 |\n|      1 |          2 |\n|      1 |          3 |\n|      1 |          4 |\n|      1 |          5 |\n|      1 |          6 |\n|      2 |          2 |\n|      2 |          3 |\n|      2 |          5 |\n|      3 |          6 |\n+--------+------------+",
+  "hash_admin": "$2b$10$ZPzZuuyGu4GVP8d8RInJZ.gBx5CCc3BxNGozfKswVAsJv7spuEl06",
+  "hash_plano": "NO",
+  "bcrypt_ok": true,
+  "log_api": [
+    {
+      "etiqueta": "Iniciar sesion (admin)",
+      "metodo": "POST",
+      "url": "http://127.0.0.1:8000/api/auth/login",
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "body": {
+        "email": "admin@techpc.com",
+        "contrasena": "Admin123*"
+      },
+      "status": 200,
+      "razon": "OK",
+      "respuesta": {
+        "message": "Inicio de sesión exitoso.",
+        "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwiY29ycmVvIjoiYWRtaW5AdGVjaHBjLmNvbSIsInJvbCI6ImFkbWluaXN0cmFkb3IiLCJleHAiOjE3ODkyMzcyOTd9.jg32wtRo4E_-8xSp0Hc9iPoyjCKxMVZz6EAu1eLZEtM",
+        "user": {
+          "id": 1,
+          "nombre": "Juan",
+          "apellido": "Pérez Updated",
+          "correo": "admin@techpc.com",
+          "rol": "administrador",
+          "rol_id": 1
+        }
+      },
+      "tiempo_ms": 108,
+      "bytes": 357
+    },
+    {
+      "etiqueta": "Listar productos (publico)",
+      "metodo": "GET",
+      "url": "http://127.0.0.1:8000/api/productos",
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "body": null,
+      "status": 200,
+      "razon": "OK",
+      "respuesta": {
+        "products": [
+          {
+            "id": 3,
+            "nombre": "RTX 5080 16GB",
+            "descripcion": "Tarjeta gráfica de alto rendimiento para gaming en 4K",
+            "precio": 3500000.0,
+            "stock": 15,
+            "imagen_url": "/images/rtx5080.jpg",
+            "categoria_id": 2,
+            "categoria_nombre": "Tarjetas Gráficas",
+            "estado": "activo",
+            "fecha_creacion": "2026-08-25T23:18:46"
+          },
+          {
+            "id": 1,
+            "nombre": "RTX 5080 16GB",
+            "descripcion": "Tarjeta gráfica de alto rendimiento para gaming en 4K",
+            "precio": 3500000.0,
+            "stock": 15,
+            "imagen_url": "/images/rtx5080.jpg",
+            "categoria_id": 2,
+            "categoria_nombre": "Tarjetas Gráficas",
+            "estado": "activo",
+            "fecha_creacion": "2026-08-25T23:09:14"
+          }
+        ]
+      },
+      "tiempo_ms": 28,
+      "bytes": 582
+    },
+    {
+      "etiqueta": "Listar usuarios SIN token",
+      "metodo": "GET",
+      "url": "http://127.0.0.1:8000/api/usuarios",
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "body": null,
+      "status": 401,
+      "razon": "Unauthorized",
+      "respuesta": {
+        "detail": "Token no proporcionado."
+      },
+      "tiempo_ms": 30,
+      "bytes": 36
+    },
+    {
+      "etiqueta": "Listar usuarios (admin)",
+      "metodo": "GET",
+      "url": "http://127.0.0.1:8000/api/usuarios",
+      "headers": {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwiY29ycmVvIjoiYWRtaW5AdGVjaHBjLmNvbSIsInJvbCI6ImFkbWluaXN0cmFkb3IiLCJleHAiOjE3ODkyMzcyOTd9.jg32wtRo4E_-8xSp0Hc9iPoyjCKxMVZz6EAu1eLZEtM"
+      },
+      "body": null,
+      "status": 200,
+      "razon": "OK",
+      "respuesta": {
+        "users": [
+          {
+            "id": 8,
+            "nombre": "Maria",
+            "apellido": "Empleada",
+            "tipo_documento": "CC",
+            "numero_documento": "1020304050",
+            "direccion": "Calle 10 # 20-30",
+            "telefono": "3005556677",
+            "correo": "empleado@techpc.com",
+            "estado": "activo",
+            "rol_id": 2,
+            "rol_nombre": "empleado",
+            "fecha_registro": "2026-09-11T13:04:14"
+          },
+          {
+            "id": 9,
+            "nombre": "Carlos",
+            "apellido": "Cliente",
+            "tipo_documento": "CC",
+            "numero_documento": "1098765432",
+            "direccion": "Cra 50 # 60-70",
+            "telefono": "3119998877",
+            "correo": "cliente@techpc.com",
+            "estado": "activo",
+            "rol_id": 3,
+            "rol_nombre": "cliente",
+            "fecha_registro": "2026-09-11T13:04:14"
+          },
+          {
+            "id": 6,
+            "nombre": "Juan",
+            "apellido": "Pérez",
+            "tipo_documento": "CC",
+            "numero_documento": "12345678",
+            "direccion": "Cra 10 # 20-30, Bogotá",
+            "telefono": "3101234567",
+            "correo": "simon1612@gmail.com ",
+            "estado": "activo",
+            "rol_id": 3,
+            "rol_nombre": "cliente",
+            "fecha_registro": "2026-09-02T17:04:55"
+          },
+          {
+            "id": 4,
+            "nombre": "yeison",
+            "apellido": "manuel",
+            "tipo_documento": "CC",
+            "numero_documento": "43747399",
+            "direccion": "cl 101c #27",
+            "telefono": "300123456",
+            "correo": "yeison123@gmail.com",
+            "estado": "activo",
+            "rol_id": 3,
+            "rol_nombre": "cliente",
+            "fecha_registro": "2026-09-02T16:46:27"
+          },
+          {
+            "id": 1,
+            "nombre": "Juan",
+            "apellido": "Pérez Updated",
+            "tipo_documento": "CC",
+            "numero_documento": "1234567890",
+            "direccion": "Cra 15 # 45-12, Bogotá",
+            "telefono": "3001234567",
+            "correo": "admin@techpc.com",
+            "estado": "activo",
+            "rol_id": 1,
+            "rol_nombre": "administrador",
+            "fecha_registro": "2026-08-25T21:40:34"
+          }
+        ]
+      },
+      "tiempo_ms": 13,
+      "bytes": 1413
+    },
+    {
+      "etiqueta": "Registrar usuario (POST)",
+      "metodo": "POST",
+      "url": "http://127.0.0.1:8000/api/usuarios/registro",
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "body": {
+        "nombre": "Mario",
+        "apellido": "Prueba",
+        "tipoDocumento": "CC",
+        "numeroDocumento": "2089150897",
+        "direccion": "Calle 100 # 20-30",
+        "telefono": "3009998877",
+        "correo": "prueba.api.89150897@techpc.com",
+        "contrasena": "Prueba123*"
+      },
+      "status": 201,
+      "razon": "Created",
+      "respuesta": {
+        "message": "Usuario registrado exitosamente.",
+        "user": {
+          "id": 10,
+          "nombre": "Mario",
+          "apellido": "Prueba",
+          "correo": "prueba.api.89150897@techpc.com",
+          "rol": "cliente"
+        }
+      },
+      "tiempo_ms": 176,
+      "bytes": 158
+    },
+    {
+      "etiqueta": "Actualizar usuario (PUT)",
+      "metodo": "PUT",
+      "url": "http://127.0.0.1:8000/api/usuarios/10",
+      "headers": {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwiY29ycmVvIjoiYWRtaW5AdGVjaHBjLmNvbSIsInJvbCI6ImFkbWluaXN0cmFkb3IiLCJleHAiOjE3ODkyMzcyOTd9.jg32wtRo4E_-8xSp0Hc9iPoyjCKxMVZz6EAu1eLZEtM"
+      },
+      "body": {
+        "nombre": "Mario Andres",
+        "telefono": "3001112233"
+      },
+      "status": 200,
+      "razon": "OK",
+      "respuesta": {
+        "message": "Usuario actualizado exitosamente."
+      },
+      "tiempo_ms": 53,
+      "bytes": 47
+    },
+    {
+      "etiqueta": "Cambiar estado (PATCH)",
+      "metodo": "PATCH",
+      "url": "http://127.0.0.1:8000/api/usuarios/10/estado",
+      "headers": {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwiY29ycmVvIjoiYWRtaW5AdGVjaHBjLmNvbSIsInJvbCI6ImFkbWluaXN0cmFkb3IiLCJleHAiOjE3ODkyMzcyOTd9.jg32wtRo4E_-8xSp0Hc9iPoyjCKxMVZz6EAu1eLZEtM"
+      },
+      "body": {
+        "estado": "inactivo"
+      },
+      "status": 200,
+      "razon": "OK",
+      "respuesta": {
+        "message": "Estado del usuario actualizado.",
+        "estado": "inactivo"
+      },
+      "tiempo_ms": 41,
+      "bytes": 65
+    },
+    {
+      "etiqueta": "Eliminar usuario (DELETE)",
+      "metodo": "DELETE",
+      "url": "http://127.0.0.1:8000/api/usuarios/10",
+      "headers": {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxIiwiY29ycmVvIjoiYWRtaW5AdGVjaHBjLmNvbSIsInJvbCI6ImFkbWluaXN0cmFkb3IiLCJleHAiOjE3ODkyMzcyOTd9.jg32wtRo4E_-8xSp0Hc9iPoyjCKxMVZz6EAu1eLZEtM"
+      },
+      "body": null,
+      "status": 200,
+      "razon": "OK",
+      "respuesta": {
+        "message": "Usuario eliminado exitosamente."
+      },
+      "tiempo_ms": 40,
+      "bytes": 45
+    }
+  ]
+}

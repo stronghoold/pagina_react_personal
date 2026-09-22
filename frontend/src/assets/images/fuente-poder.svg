@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0f172a"/>
+      <stop offset="1" stop-color="#1e1b4b"/>
+    </linearGradient>
+    <linearGradient id="psu" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1e293b"/>
+      <stop offset="1" stop-color="#0f172a"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="450" fill="url(#bg)"/>
+  <circle cx="200" cy="90" r="120" fill="#22d3ee" opacity="0.1"/>
+  <circle cx="620" cy="370" r="130" fill="#818cf8" opacity="0.12"/>
+  <!-- Cuerpo -->
+  <rect x="190" y="110" width="420" height="250" rx="20" fill="url(#psu)" stroke="#334155" stroke-width="3"/>
+  <!-- Fane -->
+  <circle cx="400" cy="210" r="75" fill="#111827" stroke="#334155" stroke-width="3"/>
+  <circle cx="400" cy="210" r="26" fill="#22d3ee" opacity="0.8"/>
+  <g fill="#475569">
+    <path d="M400 138 A72 72 0 0 1 466 180 L430 210 Z"/>
+    <path d="M400 282 A72 72 0 0 1 334 240 L370 210 Z"/>
+    <path d="M330 175 A72 72 0 0 1 400 138 L400 175 Z"/>
+    <path d="M470 245 A72 72 0 0 1 400 282 L400 245 Z"/>
+  </g>
+  <circle cx="400" cy="210" r="75" fill="none" stroke="#334155" stroke-width="2"/>
+  <!-- Rejilla -->
+  <g stroke="#334155" stroke-width="2">
+    <line x1="240" y1="318" x2="560" y2="318"/>
+    <line x1="240" y1="330" x2="560" y2="330"/>
+    <line x1="240" y1="342" x2="560" y2="342"/>
+  </g>
+  <!-- Conectores -->
+  <rect x="240" y="280" width="46" height="24" rx="4" fill="#0f172a" stroke="#64748b" stroke-width="2"/>
+  <rect x="300" y="280" width="46" height="24" rx="4" fill="#0f172a" stroke="#64748b" stroke-width="2"/>
+  <rect x="360" y="280" width="46" height="24" rx="4" fill="#0f172a" stroke="#64748b" stroke-width="2"/>
+  <!-- Switch -->
+  <rect x="510" y="130" width="46" height="26" rx="6" fill="#22d3ee"/>
+  <rect x="514" y="134" width="20" height="18" rx="4" fill="#0f766e"/>
+  <text x="400" y="425" fill="#94a3b8" font-family="Arial" font-size="22" font-weight="bold" text-anchor="middle">FUENTE DE PODER 850W</text>
+</svg>

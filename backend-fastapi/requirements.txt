@@ -1,0 +1,17 @@
+fastapi
+uvicorn[standard]
+sqlalchemy
+pydantic
+pydantic[email]
+python-dotenv
+python-jose[cryptography]
+bcrypt
+pymysql
+email-validator
+
+# ─── Quinto avance: reportes y facturación ───
+reportlab
+openpyxl
+
+# ─── Quinto avance: integración del Chatbot con IA ───
+httpx

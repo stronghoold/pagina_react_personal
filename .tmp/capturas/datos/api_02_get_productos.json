@@ -1,0 +1,41 @@
+{
+  "etiqueta": "Listar productos (publico)",
+  "metodo": "GET",
+  "url": "http://127.0.0.1:8000/api/productos",
+  "headers": {
+    "Content-Type": "application/json"
+  },
+  "body": null,
+  "status": 200,
+  "razon": "OK",
+  "respuesta": {
+    "products": [
+      {
+        "id": 3,
+        "nombre": "RTX 5080 16GB",
+        "descripcion": "Tarjeta gráfica de alto rendimiento para gaming en 4K",
+        "precio": 3500000.0,
+        "stock": 15,
+        "imagen_url": "/images/rtx5080.jpg",
+        "categoria_id": 2,
+        "categoria_nombre": "Tarjetas Gráficas",
+        "estado": "activo",
+        "fecha_creacion": "2026-08-25T23:18:46"
+      },
+      {
+        "id": 1,
+        "nombre": "RTX 5080 16GB",
+        "descripcion": "Tarjeta gráfica de alto rendimiento para gaming en 4K",
+        "precio": 3500000.0,
+        "stock": 15,
+        "imagen_url": "/images/rtx5080.jpg",
+        "categoria_id": 2,
+        "categoria_nombre": "Tarjetas Gráficas",
+        "estado": "activo",
+        "fecha_creacion": "2026-08-25T23:09:14"
+      }
+    ]
+  },
+  "tiempo_ms": 28,
+  "bytes": 582
+}

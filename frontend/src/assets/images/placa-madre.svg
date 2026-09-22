@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0f172a"/>
+      <stop offset="1" stop-color="#1e1b4b"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="450" fill="url(#bg)"/>
+  <circle cx="170" cy="110" r="120" fill="#818cf8" opacity="0.12"/>
+  <circle cx="640" cy="350" r="130" fill="#22d3ee" opacity="0.1"/>
+  <!-- Placa base -->
+  <rect x="130" y="90" width="540" height="290" rx="16" fill="#0b1220" stroke="#334155" stroke-width="3"/>
+  <!-- Socket CPU -->
+  <rect x="300" y="130" width="150" height="150" rx="12" fill="#1e293b" stroke="#64748b" stroke-width="2"/>
+  <rect x="318" y="148" width="114" height="114" rx="8" fill="none" stroke="#94a3b8" stroke-width="2"/>
+  <text x="375" y="213" fill="#cbd5e1" font-family="Arial" font-size="20" font-weight="bold" text-anchor="middle">CPU</text>
+  <!-- Ranuras RAM -->
+  <g fill="#134e4a" stroke="#2dd4bf" stroke-width="2">
+    <rect x="520" y="150" width="26" height="110" rx="4"/>
+    <rect x="556" y="150" width="26" height="110" rx="4"/>
+    <rect x="592" y="150" width="26" height="110" rx="4"/>
+    <rect x="628" y="150" width="26" height="110" rx="4"/>
+  </g>
+  <!-- Ranura PCIe -->
+  <rect x="160" y="320" width="280" height="24" rx="6" fill="#1e293b" stroke="#64748b" stroke-width="2"/>
+  <rect x="160" y="355" width="200" height="20" rx="5" fill="#1e293b" stroke="#64748b" stroke-width="2"/>
+  <!-- Conectores de poder -->
+  <rect x="320" y="340" width="40" height="40" rx="6" fill="#334155"/>
+  <rect x="376" y="340" width="40" height="40" rx="6" fill="#334155"/>
+  <!-- Chipset -->
+  <rect x="200" y="200" width="70" height="70" rx="8" fill="#312e81" stroke="#6366f1" stroke-width="2"/>
+  <rect x="212" y="212" width="46" height="46" rx="6" fill="#4f46e5" opacity="0.6"/>
+  <!-- M.2 -->
+  <rect x="240" y="290" width="120" height="18" rx="4" fill="#0f172a" stroke="#22d3ee" stroke-width="2"/>
+  <circle cx="215" cy="215" r="6" fill="#22d3ee"/>
+  <text x="400" y="425" fill="#94a3b8" font-family="Arial" font-size="22" font-weight="bold" text-anchor="middle">PLACA BASE</text>
+</svg>

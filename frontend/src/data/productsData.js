@@ -1,0 +1,58 @@
+const productsData = [
+  {
+    id: 1,
+    image: '/images/producto-tarjeta-grafica.jpg',
+    name: 'RTX 5090 OC 32GB',
+    category: 'Tarjetas gráficas',
+    price: '$5.999.000',
+    rating: 5,
+    badge: 'Más vendida',
+  },
+  {
+    id: 2,
+    image: '/images/producto-procesador.webp',
+    name: 'Core Ultra 9 285K',
+    category: 'Procesadores',
+    price: '$1.750.000',
+    rating: 5,
+    badge: 'Nuevo',
+  },
+  {
+    id: 3,
+    image: '/images/producto-memoria-ram.jpg',
+    name: 'DDR5 32GB 6400MHz',
+    category: 'Memorias',
+    price: '$520.000',
+    rating: 4,
+    badge: null,
+  },
+  {
+    id: 4,
+    image: '/images/producto-disco-ssd.jpg',
+    name: 'SSD NVMe 2TB Gen4',
+    category: 'Almacenamiento',
+    price: '$690.000',
+    rating: 5,
+    badge: 'Oferta',
+  },
+  {
+    id: 5,
+    image: '/images/producto-placa-madre.webp',
+    name: 'Placa Base Z890 WiFi',
+    category: 'Placas base',
+    price: '$980.000',
+    rating: 4,
+    badge: null,
+  },
+  {
+    id: 6,
+    image: '/images/producto-gabinete.jpg',
+    name: 'Gabinete Mid-Tower ARGB',
+    category: 'Gabinetes',
+    price: '$420.000',
+    rating: 4,
+    badge: null,
+  },
+]
+
+export default productsData
