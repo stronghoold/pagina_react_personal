@@ -83,34 +83,35 @@ export const AuthProvider = ({ children }) => {
 
   // ─── Login ───
   const login = useCallback(async (email, contrasena) => {
-    // Intentar backend primero
-    if (backendAvailableRef.current) {
-      try {
-        const res = await fetch(`${API_URL}/login`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, contrasena }),
-        })
+    // Siempre intentar el backend real primero (sin depender del chequeo
+    // previo, que puede no haber terminado todavía cuando el usuario
+    // le da clic a "Iniciar sesión").
+    try {
+      const res = await fetch(`${API_URL}/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, contrasena }),
+      })
 
-        const data = await res.json()
-        if (!res.ok) {
-          // Error de credenciales del backend — sí se propaga
-          throw new Error(data.message || 'Correo o contraseña incorrectos.')
-        }
+      const data = await res.json()
+      if (!res.ok) {
+        // Error de credenciales del backend — sí se propaga
+        throw new Error(data.message || 'Correo o contraseña incorrectos.')
+      }
 
-        localStorage.setItem('techpc_token', data.token)
-        localStorage.setItem('techpc_user', JSON.stringify(data.user))
-        setToken(data.token)
-        setUser(data.user)
-        return data
-      } catch (err) {
-        // Si es error de red, marcar backend como no disponible y continuar con fallback
-        if (isNetworkError(err)) {
-          backendAvailableRef.current = false
-        } else {
-          // Error de credenciales real (401, 403, etc.) — propagar
-          throw err
-        }
+      backendAvailableRef.current = true
+      localStorage.setItem('techpc_token', data.token)
+      localStorage.setItem('techpc_user', JSON.stringify(data.user))
+      setToken(data.token)
+      setUser(data.user)
+      return data
+    } catch (err) {
+      // Si es error de red, marcar backend como no disponible y continuar con fallback
+      if (isNetworkError(err)) {
+        backendAvailableRef.current = false
+      } else {
+        // Error de credenciales real (401, 403, etc.) — propagar
+        throw err
       }
     }
 
@@ -142,28 +143,27 @@ export const AuthProvider = ({ children }) => {
 
   // ─── Register ───
   const register = useCallback(async (formData) => {
-    // Intentar backend primero
-    if (backendAvailableRef.current) {
-      try {
-        const res = await fetch(`${API_URL_BASE}/usuarios/registro`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(formData),
-        })
+    // Siempre intentar el backend real primero.
+    try {
+      const res = await fetch(`${API_URL_BASE}/usuarios/registro`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      })
 
-        const data = await res.json()
-        if (!res.ok) {
-          // Error del backend (ej: correo duplicado) — sí se propaga
-          throw new Error(data.message || 'Error al registrar usuario.')
-        }
-        return data
-      } catch (err) {
-        if (isNetworkError(err)) {
-          backendAvailableRef.current = false
-        } else {
-          // Error de validación del backend — propagar
-          throw err
-        }
+      const data = await res.json()
+      if (!res.ok) {
+        // Error del backend (ej: correo duplicado) — sí se propaga
+        throw new Error(data.message || 'Error al registrar usuario.')
+      }
+      backendAvailableRef.current = true
+      return data
+    } catch (err) {
+      if (isNetworkError(err)) {
+        backendAvailableRef.current = false
+      } else {
+        // Error de validación del backend — propagar
+        throw err
       }
     }
 
