@@ -1,0 +1,5 @@
+Capturas: 29 | Fallidas: 0 | Descargas: 3
+OK: 01-inicio, 02-chatbot, 03-chatbot-pqr, 04-admin-dashboard, 05-admin-dashboard-filtros, 06-admin-ventas, 07-admin-nueva-venta, 08-admin-venta-registrada, 09-admin-venta-detalle, 10-admin-ventas-filtros, 11-admin-ventas-facturada, 12-admin-facturas, 13-admin-factura-detalle, 14-admin-factura-pdf, 15-admin-reportes, 16-admin-reporte-pdf, 17-admin-reporte-excel, 18-admin-pqr, 19-admin-pqr-gestion, 20-admin-usuarios, 21-admin-productos, 30-empleado-dashboard, 31-empleado-ventas, 32-empleado-pqr, 40-cliente-dashboard, 41-cliente-compras, 42-cliente-facturas, 43-cliente-pqr-form, 44-cliente-pqr-registrada
+DESCARGA factura pdf -> C:\Users\simon\OneDrive\Desktop\pagina_react_personal\.tmp\capturas\out\factura_V-20260922-0001.pdf (3053 bytes)
+DESCARGA reporte pdf -> C:\Users\simon\OneDrive\Desktop\pagina_react_personal\.tmp\capturas\out\reporte_ventas_2026-09-22.pdf (2906 bytes)
+DESCARGA reporte excel -> C:\Users\simon\OneDrive\Desktop\pagina_react_personal\.tmp\capturas\out\reporte_ventas_2026-09-22.xlsx (5830 bytes)

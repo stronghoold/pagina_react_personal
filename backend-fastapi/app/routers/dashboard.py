@@ -362,11 +362,11 @@ def filtros_dashboard(
     """Listas necesarias para los filtros de los Dashboards."""
     return {
         'productos': [
-            {'id': p.id, 'nombre': p.nombre}
+            {'id': p.id, 'nombre': p.nombre, 'precio': float(p.precio or 0)}
             for p in db.query(Producto).order_by(Producto.nombre).all()
         ],
         'servicios': [
-            {'id': s.id, 'nombre': s.nombre}
+            {'id': s.id, 'nombre': s.nombre, 'precio': float(s.precio or 0)}
             for s in db.query(Servicio).order_by(Servicio.nombre).all()
         ],
         'clientes': [

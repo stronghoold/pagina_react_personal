@@ -118,7 +118,7 @@ def _barra_tareas(canvas):
     x += 46
     d.rounded_rectangle([x - 9, cy - 9, x + 9, cy + 9], radius=2, fill=(0, 122, 204))
     d.text((x, cy), "<>", font=UI_B(11), fill=(255, 255, 255), anchor="mm")
-    d.text((CANVAS_W - 24, cy), "3:45 p. m.\n11/09/2026", font=UI(12),
+    d.text((CANVAS_W - 24, cy), "9:05 p. m.\n22/09/2026", font=UI(12),
            fill=(26, 26, 26), anchor="rm", align="right", spacing=2)
 
 
@@ -345,8 +345,12 @@ def _estrella(d, cx, cy, color, r=7, width=1):
     d.polygon(pts, outline=color, width=width)
 
 
-def ventana_chrome(contenido, url, out, host="localhost:5173"):
-    """Enmarca una captura de pagina (1440x860) en una ventana de Chrome."""
+def ventana_chrome(contenido, url, out, host="localhost:5173", ajustar=True):
+    """Enmarca una captura de pagina (1440x860) en una ventana de Chrome.
+
+    Con ajustar=False el contenido debe medir exactamente 1440x860 (por ejemplo
+    la pagina del visor de PDF ya compuesta).
+    """
     TAB_H, TOOL_H = 40, 44
     win = Image.new("RGB", (WIN_W, WIN_H), (255, 255, 255))
     d = ImageDraw.Draw(win)
@@ -374,7 +378,10 @@ def ventana_chrome(contenido, url, out, host="localhost:5173"):
     d.text((ad0 + 34, mid), host + url, font=UI(13), fill=(32, 33, 36), anchor="lm")
     _estrella(d, ad1 + 30, mid, ICON)
 
-    win.paste(contenido.convert("RGB").resize((1440, 860)), (0, TAB_H + TOOL_H))
+    cuerpo = contenido.convert("RGB")
+    if ajustar:
+        cuerpo = cuerpo.resize((1440, 860))
+    win.paste(cuerpo.crop((0, 0, 1440, 860)), (0, TAB_H + TOOL_H))
     montar_ventana(win, out)
 
 
@@ -549,7 +556,8 @@ def _badge(d, x, y, metodo, escala=1.0):
     return ancho
 
 
-def ventana_postman(coleccion, peticion, out, respuestas_extra=None):
+def ventana_postman(coleccion, peticion, out, respuestas_extra=None,
+                    titulo="TechPC API - FastAPI (Quinto Avance)"):
     """coleccion: lista de (nivel, nombre, metodo|None)
     peticion: dict con metodo, url, headers, body, status, respuesta, tiempo_ms, bytes"""
     win = Image.new("RGB", (WIN_W, WIN_H), PM_BG)
@@ -559,7 +567,7 @@ def ventana_postman(coleccion, peticion, out, respuestas_extra=None):
     d.rectangle([0, 0, WIN_W, 34], fill=(44, 44, 44))
     d.ellipse([14, 9, 26, 21], fill=(255, 108, 55))
     d.text((34, 17), "Postman", font=UI_B(12), fill=(230, 230, 230), anchor="lm")
-    d.text((120, 17), "TechPC API - FastAPI (Cuarto Avance)", font=UI(11),
+    d.text((120, 17), titulo, font=UI(11),
            fill=(170, 170, 170), anchor="lm")
     botones_ventana(d, 17, (200, 200, 200), cerrar_rojo=True)
 
@@ -658,6 +666,168 @@ def ventana_postman(coleccion, peticion, out, respuestas_extra=None):
             d.text((x, y), texto, font=MONO(12), fill=color)
             x += d.textlength(texto, font=MONO(12))
         y += 18
+
+    montar_ventana(win, out)
+
+
+# ───────────────────────── ventana Excel ─────────────────────────
+
+XL_GREEN = (33, 115, 70)
+XL_TEXT = (32, 32, 32)
+XL_GRID = (217, 217, 217)
+XL_HEAD = (243, 243, 243)
+XL_BLUE = (30, 58, 138)
+
+
+def ventana_excel(hoja, filas, out, archivo="reporte_ventas_2026-09-22.xlsx"):
+    """Dibuja el libro de Excel generado por FastAPI con sus datos reales.
+
+    hoja   : nombre de la hoja activa
+    filas  : lista de listas con los valores de cada celda
+    """
+    from openpyxl.utils import get_column_letter
+
+    win = Image.new("RGB", (WIN_W, WIN_H), (255, 255, 255))
+    d = ImageDraw.Draw(win)
+
+    # barra de titulo
+    d.rectangle([0, 0, WIN_W, 34], fill=(243, 243, 243))
+    d.rectangle([16, 7, 36, 27], fill=(33, 115, 70))
+    d.text((26, 17), "X", font=UI_B(13), fill=(255, 255, 255), anchor="mm")
+    d.text((46, 17), archivo + " - Excel", font=UI(12), fill=XL_TEXT, anchor="lm")
+    botones_ventana(d, 17, CAPTION_DARK, cerrar_rojo=True)
+
+    # pestanas de la cinta de opciones
+    d.rectangle([0, 34, WIN_W, 68], fill=(250, 250, 250))
+    d.line([(0, 68), (WIN_W, 68)], fill=(225, 225, 225), width=1)
+    for i, texto in enumerate(("Archivo", "Inicio", "Insertar", "Dibujar", "Diseno",
+                               "Formulas", "Datos", "Revisar", "Vista", "Ayuda")):
+        x = 86 + i * 82
+        activo = texto == "Inicio"
+        d.text((x, 51), texto, font=UI_B(12) if activo else UI(12),
+               fill=XL_GREEN if activo else (68, 68, 68), anchor="lm")
+        if activo:
+            d.rectangle([x - 10, 64, x + 40, 67], fill=XL_GREEN)
+
+    # grupos de la cinta
+    d.rectangle([0, 68, WIN_W, 150], fill=(250, 250, 250))
+    d.line([(0, 150), (WIN_W, 150)], fill=(225, 225, 225), width=1)
+    grupos = [
+        ("Pegar", ["Cortar", "Copiar", "Pegar"]),
+        ("Fuente", ["Calibri 11", "N", "K", "S"]),
+        ("Alineacion", ["Izq", "Centro", "Der"]),
+        ("Numero", ["$", "%", ","]),
+        ("Estilos", ["Bueno", "Malo", "Neutro"]),
+        ("Celdas", ["Insertar", "Eliminar", "Formato"]),
+        ("Modificar", ["Ordenar", "Buscar"]),
+    ]
+    x = 16
+    for titulo, botones in grupos:
+        ancho = 26 + max(60, len(botones) * 74)
+        for j, b in enumerate(botones):
+            bx = x + j * 74
+            d.rounded_rectangle([bx, 80, bx + 66, 126], radius=4, fill=(255, 255, 255),
+                                outline=(225, 225, 225))
+            d.text((bx + 33, 103), b, font=UI(10), fill=(68, 68, 68), anchor="mm")
+        d.text((x + ancho / 2 - 12, 138), titulo, font=UI(10), fill=(120, 120, 120), anchor="mm")
+        x += ancho
+        if x > WIN_W - 120:
+            break
+
+    # barra de formulas
+    d.rectangle([0, 150, WIN_W, 182], fill=(250, 250, 250))
+    d.rectangle([14, 157, 132, 177], fill=(255, 255, 255), outline=(205, 205, 205))
+    d.text((24, 167), "A1", font=UI(11), fill=XL_TEXT, anchor="lm")
+    d.text((148, 167), "fx", font=UI(11), fill=(120, 120, 120), anchor="lm")
+    d.line([(176, 157), (176, 177)], fill=(205, 205, 205), width=1)
+    primera = filas[0][0] if filas and filas[0] else ""
+    d.text((188, 167), str(primera)[:90], font=UI(11), fill=XL_TEXT, anchor="lm")
+    d.line([(0, 182), (WIN_W, 182)], fill=(217, 217, 217), width=1)
+
+    # grilla de celdas
+    num_w = 46
+    n_cols = max(len(f) for f in filas)
+    anchos = []
+    for c in range(n_cols):
+        largo = max(len(str(f[c])) if c < len(f) else 0 for f in filas)
+        anchos.append(int(min(max(66, largo * 7.4 + 24), 260)))
+    total = sum(anchos)
+    if total > WIN_W - num_w:
+        factor = (WIN_W - num_w) / total
+        anchos = [int(a * factor) for a in anchos]
+
+    y0 = 182
+    head_h = 24
+    d.rectangle([0, y0, WIN_W, y0 + head_h], fill=XL_HEAD)
+    x = num_w
+    for c in range(n_cols):
+        d.text((x + anchos[c] // 2, y0 + head_h // 2), get_column_letter(c + 1),
+               font=UI(11), fill=(80, 80, 80), anchor="mm")
+        d.line([(x, y0), (x, y0 + head_h)], fill=XL_GRID, width=1)
+        x += anchos[c]
+    d.line([(0, y0 + head_h), (WIN_W, y0 + head_h)], fill=XL_GRID, width=1)
+
+    fila_h = 22
+    y = y0 + head_h
+    filas_dibujadas = 0
+    for f in filas:
+        if y + fila_h > WIN_H - 52:
+            break
+        d.text((num_w // 2, y + fila_h // 2), str(filas_dibujadas + 1), font=UI(10),
+               fill=(120, 120, 120), anchor="mm")
+        x = num_w
+        for c in range(n_cols):
+            valor = f[c] if c < len(f) else ""
+            texto = "" if valor is None else str(valor)
+            if filas_dibujadas == 0:
+                color, fuente = XL_BLUE, UI_B(11)
+            else:
+                color, fuente = XL_TEXT, UI(11)
+            if texto:
+                if c == 0 and not isinstance(valor, (int, float)):
+                    d.text((x + 8, y + fila_h // 2), texto[:34], font=fuente, fill=color, anchor="lm")
+                else:
+                    d.text((x + anchos[c] - 8, y + fila_h // 2), texto[:22], font=fuente,
+                           fill=color, anchor="rm")
+            x += anchos[c]
+        if filas_dibujadas == 5:
+            d.rectangle([num_w, y, num_w + sum(anchos), y + fila_h], fill=XL_BLUE)
+            x = num_w
+            for c in range(n_cols):
+                valor = f[c] if c < len(f) else ""
+                texto = "" if valor is None else str(valor)
+                if texto:
+                    if c == 0:
+                        d.text((x + 8, y + fila_h // 2), texto[:34], font=UI_B(11),
+                               fill=(255, 255, 255), anchor="lm")
+                    else:
+                        d.text((x + anchos[c] - 8, y + fila_h // 2), texto[:22],
+                               font=UI_B(11), fill=(255, 255, 255), anchor="rm")
+                x += anchos[c]
+        d.line([(0, y + fila_h), (WIN_W, y + fila_h)], fill=(238, 238, 238), width=1)
+        y += fila_h
+        filas_dibujadas += 1
+
+    # lineas verticales de la grilla
+    x = num_w
+    for c in range(n_cols):
+        d.line([(x, y0), (x, y)], fill=XL_GRID, width=1)
+        x += anchos[c]
+
+    # pestanas de hojas
+    d.rectangle([0, WIN_H - 52, WIN_W, WIN_H - 26], fill=(243, 243, 243))
+    d.line([(0, WIN_H - 52), (WIN_W, WIN_H - 52)], fill=(217, 217, 217), width=1)
+    d.rectangle([14, WIN_H - 50, 26, WIN_H - 28], fill=(255, 255, 255), outline=(205, 205, 205))
+    d.text((20, WIN_H - 39), "+", font=UI_B(13), fill=XL_GREEN, anchor="mm")
+    d.rectangle([36, WIN_H - 52, 190, WIN_H - 26], fill=(255, 255, 255))
+    d.line([(36, WIN_H - 52), (190, WIN_H - 52)], fill=XL_GREEN, width=2)
+    d.text((48, WIN_H - 39), hoja, font=UI(11), fill=XL_GREEN, anchor="lm")
+
+    # barra de estado
+    d.rectangle([0, WIN_H - 26, WIN_W, WIN_H], fill=XL_GREEN)
+    d.text((14, WIN_H - 13), "Listo", font=UI(11), fill=(255, 255, 255), anchor="lm")
+    d.text((WIN_W - 14, WIN_H - 13), "Recuento: %d filas   |   Promedio   |   Suma" % filas_dibujadas,
+           font=UI(11), fill=(255, 255, 255), anchor="rm")
 
     montar_ventana(win, out)
 
