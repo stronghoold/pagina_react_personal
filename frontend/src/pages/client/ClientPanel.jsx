@@ -10,15 +10,17 @@ import DashboardCliente from '../../components/comercial/DashboardCliente'
 import VentasPanel from '../../components/comercial/VentasPanel'
 import FacturasPanel from '../../components/comercial/FacturasPanel'
 import PqrPanel from '../../components/comercial/PqrPanel'
+import ClientSidebar, { CLIENT_TABS } from '../../components/client/ClientSidebar'
 
 const SERVICES_KEY = 'techpc_services'
 const PRODUCTS_KEY = 'techpc_products'
 const getStored = (key) => { try { return JSON.parse(localStorage.getItem(key)) || [] } catch { return [] } }
 
-const ClientPanel = () => {
-  const { user, token } = useAuth()
+const ClientPanel = ({ dark, onToggleTheme }) => {
+  const { user, token, logout } = useAuth()
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState('dashboard')
+  const [mobileOpen, setMobileOpen] = useState(false)
   const [products, setProducts] = useState([])
   const [services, setServices] = useState([])
   const [loading, setLoading] = useState(true)
@@ -49,58 +51,74 @@ const ClientPanel = () => {
 
   if (!user) return null
 
-  const tabs = [
-    { id: 'dashboard', label: '📊 Mi resumen' },
-    { id: 'products', label: '📦 Productos' },
-    { id: 'services', label: '🔧 Servicios' },
-    { id: 'purchases', label: '🛒 Mis compras' },
-    { id: 'invoices', label: '📄 Mis facturas' },
-    { id: 'pqr', label: '📨 PQR' },
-    { id: 'profile', label: '👤 Mi Perfil' },
-    { id: 'switch', label: '🔄 Cambiar cuenta' },
-  ]
+  const activeLabel = CLIENT_TABS.find((t) => t.id === activeTab)?.label || ''
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-      <div className="relative mb-8 overflow-hidden rounded-2xl border border-neon-purple/20 bg-gradient-to-r from-slate-900 via-primary-950/80 to-slate-900 p-6 text-white shadow-xl shadow-neon-purple/10">
-        <div className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-neon-purple/15 blur-[60px]" />
-        <div className="pointer-events-none absolute -bottom-10 -left-10 h-32 w-32 rounded-full bg-neon-cyan/10 blur-[50px]" />
-        <h1 className="relative text-2xl font-extrabold">¡Bienvenido, {user.nombre}!</h1>
-        <p className="relative mt-1 text-sm text-slate-300">
-          Explora productos y servicios, revisa tus compras y gestiona tus solicitudes.
-        </p>
-      </div>
+    <div className="min-h-screen" style={{ background: 'var(--bg-secondary)' }}>
+      {/* Sidebar fijo */}
+      <ClientSidebar
+        activeTab={activeTab}
+        onNavigate={setActiveTab}
+        dark={dark}
+        onToggleTheme={onToggleTheme}
+        user={user}
+        onLogout={() => {
+          logout()
+          navigate('/')
+        }}
+        mobileOpen={mobileOpen}
+        onCloseMobile={() => setMobileOpen(false)}
+      />
 
-      <div className="mb-6 flex gap-2 overflow-x-auto border-b border-slate-800">
-        {tabs.map((tab) => (
+      {/* Contenido principal: queda al lado del sidebar (lg:pl-72) */}
+      <div className="flex min-h-screen flex-col lg:pl-72">
+        {/* Barra superior del contenido (solo móvil: botón del menú) */}
+        <header
+          className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b px-4 backdrop-blur-xl lg:hidden"
+          style={{ background: 'var(--bg-card)', borderColor: 'var(--border-color)' }}
+        >
           <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`whitespace-nowrap border-b-2 px-4 py-3 text-sm font-semibold transition-colors ${
-              activeTab === tab.id
-                ? 'border-neon-purple text-neon-purple'
-                : 'border-transparent text-slate-500 hover:text-slate-300'
-            }`}
+            onClick={() => setMobileOpen(true)}
+            aria-label="Abrir menú del panel"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-xl border text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
           >
-            {tab.label}
+            <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+            </svg>
           </button>
-        ))}
-      </div>
+          <h1 className="text-lg font-extrabold" style={{ color: 'var(--text-primary)' }}>
+            Mi Panel
+          </h1>
+        </header>
 
-      {loading && ['products', 'services'].includes(activeTab) ? (
-        <p className="text-slate-500 dark:text-slate-400">Cargando...</p>
-      ) : (
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900/80">
-          {activeTab === 'dashboard' && <DashboardCliente token={token} />}
-          {activeTab === 'products' && <ProductsClientTab products={products} />}
-          {activeTab === 'services' && <ServicesClientTab services={services} />}
-          {activeTab === 'purchases' && <VentasPanel token={token} esCliente />}
-          {activeTab === 'invoices' && <FacturasPanel token={token} esCliente />}
-          {activeTab === 'pqr' && <PqrPanel token={token} esCliente />}
-          {activeTab === 'profile' && <ProfileTab user={user} />}
-          {activeTab === 'switch' && <SwitchAccountTab user={user} />}
-        </div>
-      )}
+        <main className="flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+          {/* Encabezado de la sección activa */}
+          <div className="mb-6">
+            <h2 className="text-2xl font-extrabold text-slate-900 dark:text-white sm:text-3xl">
+              ¡Bienvenido, {user.nombre}!
+            </h2>
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+              {activeLabel}: explora productos y servicios, revisa tus compras y gestiona tus solicitudes.
+            </p>
+          </div>
+
+          {/* Contenido de la sección */}
+          {loading && ['products', 'services'].includes(activeTab) ? (
+            <p className="text-slate-500 dark:text-slate-400">Cargando...</p>
+          ) : (
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900 sm:p-6">
+              {activeTab === 'dashboard' && <DashboardCliente token={token} />}
+              {activeTab === 'products' && <ProductsClientTab products={products} />}
+              {activeTab === 'services' && <ServicesClientTab services={services} />}
+              {activeTab === 'purchases' && <VentasPanel token={token} esCliente />}
+              {activeTab === 'invoices' && <FacturasPanel token={token} esCliente />}
+              {activeTab === 'pqr' && <PqrPanel token={token} esCliente />}
+              {activeTab === 'profile' && <ProfileTab user={user} />}
+              {activeTab === 'switch' && <SwitchAccountTab user={user} />}
+            </div>
+          )}
+        </main>
+      </div>
     </div>
   )
 }

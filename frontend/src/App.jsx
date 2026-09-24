@@ -61,14 +61,14 @@ function AppContent() {
   const { open, closeDrawer } = useCartDrawer()
   const { pathname } = useLocation()
 
-  // En el panel de administración todo el chrome de la tienda desaparece:
+  // En los paneles (admin, empleado y cliente) todo el chrome de la tienda desaparece:
   // solo queda el sidebar del panel.
-  const isAdminRoute = pathname === '/admin'
+  const isPanelRoute = ['/admin', '/empleado', '/cliente'].includes(pathname)
 
   return (
       <div className="flex min-h-screen flex-col transition-colors duration-300" style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
         <ScrollToTop />
-        {!isAdminRoute && <Header dark={dark} onToggleTheme={toggle} />}
+        {!isPanelRoute && <Header dark={dark} onToggleTheme={toggle} />}
         <main className="flex-1">
           <Routes>
             <Route path="/" element={<Index />} />
@@ -79,17 +79,17 @@ function AppContent() {
             <Route path="/recuperar-password" element={<RecoverPasswordPage />} />
             {/* Paneles por rol */}
             <Route path="/admin" element={<AdminPanel dark={dark} onToggleTheme={toggle} />} />
-            <Route path="/empleado" element={<EmployeePanel />} />
-            <Route path="/cliente" element={<ClientPanel />} />
+            <Route path="/empleado" element={<EmployeePanel dark={dark} onToggleTheme={toggle} />} />
+            <Route path="/cliente" element={<ClientPanel dark={dark} onToggleTheme={toggle} />} />
             {/* Ruta por defecto para URLs desconocidas */}
             <Route path="*" element={<Index />} />
           </Routes>
         </main>
-        {!isAdminRoute && <Footer dark={dark} />}
-        {!isAdminRoute && <WhatsAppButton />}
-        {!isAdminRoute && <Chatbot />}
-        {!isAdminRoute && <CartSidebar open={open} onClose={closeDrawer} />}
-        {!isAdminRoute && <AdminFloatingButton />}
+        {!isPanelRoute && <Footer dark={dark} />}
+        {!isPanelRoute && <WhatsAppButton />}
+        {!isPanelRoute && <Chatbot />}
+        {!isPanelRoute && <CartSidebar open={open} onClose={closeDrawer} />}
+        {!isPanelRoute && <AdminFloatingButton />}
       </div>
   )
 }
