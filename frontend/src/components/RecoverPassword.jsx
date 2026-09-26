@@ -2,18 +2,23 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import Button from './Button'
 import Input from './Input'
+import { apiFetch } from '../utils/api'
 import { validateEmail } from '../utils/validations'
 
 // Componente reutilizable e independiente para recuperar la contraseña.
+// Llama a la API, que genera una contraseña temporal y la envía por correo.
 const RecoverPassword = () => {
   const [email, setEmail] = useState('')
   const [error, setError] = useState(null)
   const [touched, setTouched] = useState(false)
   const [sent, setSent] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [serverError, setServerError] = useState(null)
 
   const handleChange = (e) => {
     const value = e.target.value
     setEmail(value)
+    setServerError(null)
     // Validación en tiempo real cuando el usuario ya tocó el campo
     if (touched) setError(validateEmail(value))
   }
@@ -23,12 +28,26 @@ const RecoverPassword = () => {
     setError(validateEmail(email))
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     const validationError = validateEmail(email)
     setError(validationError)
     setTouched(true)
-    if (!validationError) setSent(true)
+    if (validationError) return
+
+    setLoading(true)
+    setServerError(null)
+    try {
+      await apiFetch('/auth/recuperar-password', {
+        method: 'POST',
+        body: { email: email.trim().toLowerCase() },
+      })
+      setSent(true)
+    } catch (err) {
+      setServerError(err.message || 'No se pudo enviar el correo de recuperación.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -65,8 +84,8 @@ const RecoverPassword = () => {
             Correo enviado
           </h2>
           <p className="mt-2 text-sm text-emerald-700 dark:text-emerald-400">
-            Si existe una cuenta asociada a <strong>{email}</strong>, recibirás un
-            correo con el enlace para restablecer tu contraseña.
+            Enviamos una contraseña temporal a <strong>{email}</strong>. Revísala
+            (y la carpeta de spam), inicia sesión con ella y cámbiala por una propia.
           </p>
           <Button variant="outline" className="mt-5" onClick={() => { setSent(false); setEmail('') }}>
             Enviar otro correo
@@ -90,11 +109,29 @@ const RecoverPassword = () => {
             }
           />
 
-          <Button type="submit" size="lg" className="w-full">
-            <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
-            </svg>
-            Recuperar contraseña
+          {serverError && (
+            <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-300">
+              {serverError}
+            </div>
+          )}
+
+          <Button type="submit" size="lg" className="w-full" disabled={loading}>
+            {loading ? (
+              <>
+                <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+                Enviando…
+              </>
+            ) : (
+              <>
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
+                </svg>
+                Recuperar contraseña
+              </>
+            )}
           </Button>
         </form>
       )}

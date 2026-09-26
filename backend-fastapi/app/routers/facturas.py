@@ -7,21 +7,26 @@ Rutas de facturas: /api/facturas  (Requerimientos 7, 8 y 9 del quinto avance)
 - GET   /api/facturas/{id}/pdf       → descargar la factura en PDF
 - PATCH /api/facturas/{id}/estado    → cambiar estado de la factura
 """
+import logging
 from datetime import date, datetime, time
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
+from ..config import EMAIL_ENABLED
 from ..database import get_db
-from ..models import DetalleFactura, Factura, Usuario, Venta
+from ..models import Factura, Usuario, Venta
 from ..schemas import FacturaCreate, FacturaEstadoUpdate
 from ..security import get_current_user, require_roles
-from ..utils.numeracion import generar_numero_factura
+from ..utils.correo import enviar_factura
+from ..utils.facturacion import crear_factura_desde_venta
 from ..utils.reportes import factura_pdf
 from ..utils.serializadores import factura_a_dict
 
 router = APIRouter(prefix='/api/facturas', tags=['Facturas'])
+
+logger = logging.getLogger('techpc.facturas')
 
 ROLES_GESTION = ('administrador', 'empleado')
 
@@ -29,6 +34,7 @@ ROLES_GESTION = ('administrador', 'empleado')
 @router.post('', status_code=status.HTTP_201_CREATED)
 def generar_factura(
     body: FacturaCreate,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     _: Usuario = Depends(require_roles(*ROLES_GESTION)),
 ):
@@ -55,38 +61,26 @@ def generar_factura(
             detail='La venta no tiene productos ni servicios registrados.',
         )
 
-    factura = Factura(
-        numero_factura=generar_numero_factura(db),
-        venta_id=venta.id,
-        cliente_id=venta.cliente_id,
-        subtotal=venta.subtotal,
-        descuento=venta.descuento,
-        impuestos=venta.impuestos,
-        total=venta.total,
-        metodo_pago=body.metodo_pago or venta.metodo_pago,
-        estado='emitida' if venta.estado != 'pagada' else 'pagada',
-    )
-    # La factura congela el detalle con los precios del momento de la venta.
-    factura.detalles = [
-        DetalleFactura(
-            descripcion=d.descripcion,
-            cantidad=d.cantidad,
-            precio_unitario=d.precio_unitario,
-            descuento=d.descuento,
-            subtotal=d.subtotal,
-        )
-        for d in venta.detalles
-    ]
-
-    db.add(factura)
-    if venta.estado == 'pendiente':
-        venta.estado = 'pagada'
+    factura = crear_factura_desde_venta(db, venta, body.metodo_pago)
     db.commit()
     db.refresh(factura)
 
+    # Se envía la factura al correo del cliente con el PDF adjunto
+    # (en segundo plano, sin bloquear la respuesta).
+    datos = factura_a_dict(factura)
+    correo_enviado = False
+    try:
+        background_tasks.add_task(enviar_factura, datos, factura_pdf(datos).getvalue())
+        correo_enviado = EMAIL_ENABLED
+    except Exception:  # noqa: BLE001 - el correo es opcional
+        logger.exception(
+            'No se pudo preparar el correo de la factura %s.', datos['numero_factura']
+        )
+
     return {
         'message': 'Factura generada exitosamente.',
-        'invoice': factura_a_dict(factura),
+        'invoice': datos,
+        'correo_enviado': correo_enviado,
     }
 
 

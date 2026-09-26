@@ -734,6 +734,66 @@ Content-Type: application/json
 
 ---
 
+## ✉️ NOTIFICACIONES POR CORREO Y CATÁLOGO PÚBLICO
+
+### Configuración del correo (SMTP)
+Todas las variables van en `backend-fastapi/.env` (plantilla en `.env.example`):
+
+| Variable | Descripción |
+|----------|-------------|
+| `SMTP_HOST` | Servidor SMTP (por defecto `smtp.gmail.com`) |
+| `SMTP_PORT` | Puerto (587 con STARTTLS) |
+| `SMTP_USER` | Correo que envía las notificaciones |
+| `SMTP_PASSWORD` | **Contraseña de aplicación** de Gmail (16 caracteres) |
+| `SMTP_FROM` / `SMTP_FROM_NAME` | Remitente visible |
+| `SMTP_TLS` / `SMTP_SSL` | Seguridad de la conexión |
+| `EMAIL_COPIA_VENTAS` | Correo que recibe copia de cada venta (opcional) |
+| `FRONTEND_URL` | URL pública del Frontend para los enlaces de los correos |
+
+> Para Gmail: activa la **verificación en dos pasos** y genera una
+> *contraseña de aplicaciones* en https://myaccount.google.com/apppasswords
+> Si `SMTP_USER` y `SMTP_PASSWORD` quedan vacíos, la aplicación funciona normal
+> pero no envía correos (se registra una advertencia en el log).
+
+### Correos que envía el sistema
+1. **Confirmación de compra**: al confirmar la compra se genera la factura y se
+   envía al cliente con el **PDF adjunto** (y copia a `EMAIL_COPIA_VENTAS`).
+2. **Factura de venta**: cuando el equipo genera una factura manualmente.
+3. **Recuperación de contraseña**: el usuario recibe una **contraseña temporal**.
+
+> Las contraseñas se guardan con **bcrypt** (hash irreversible): no es posible
+> enviar la contraseña original. Por eso el correo de recuperación entrega una
+> contraseña temporal nueva, que el usuario puede cambiar al iniciar sesión.
+
+### Nuevos archivos y endpoints
+```
+backend-fastapi/app/
+├── utils/correo.py        # Envío SMTP y plantillas HTML de los correos
+├── utils/facturacion.py   # crea la factura a partir de la venta
+└── routers/auth.py        # POST /api/auth/recuperar-password
+```
+
+| Método | Ruta | Descripción | Autenticación |
+|--------|------|-------------|---------------|
+| POST | `/api/auth/recuperar-password` | Envía una contraseña temporal al correo | No |
+| POST | `/api/ventas` | Registra la venta, genera la factura y envía el correo | Sí (JWT) |
+| POST | `/api/facturas` | Genera la factura y la envía al correo del cliente | Sí (Admin/Empleado) |
+
+La factura se genera **automáticamente** al confirmar la compra; el endpoint
+`POST /api/facturas` queda para generarla manualmente. Los correos se envían en
+segundo plano para no retrasar la respuesta de la compra.
+
+### Catálogo público y chatbot
+- **Sección de productos** (`frontend/src/pages/Productos.jsx`, ruta `/productos`):
+  muestra todo el catálogo real (productos y servicios) con búsqueda, filtro por
+  categoría y tipo, orden por precio y agregado al carrito.
+- **Chatbot**: responde preguntas de precio con datos exactos del catálogo, por
+  ejemplo «¿cuál es la tarjeta gráfica más barata?» o «¿cuál es el procesador
+  más caro?». La consulta se resuelve siempre en el backend (funciona con o sin
+  IA configurada) y además se incluye en el contexto de la IA.
+
+---
+
 ## 👥 EQUIPO DE DESARROLLO
 
 - **Proyecto:** TechPC - Tienda de Tecnología

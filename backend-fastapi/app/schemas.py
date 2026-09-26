@@ -29,6 +29,11 @@ class LoginResponse(BaseModel):
     user: dict
 
 
+class RecuperarPasswordRequest(BaseModel):
+    """Solicitud de recuperación: solo se necesita el correo del usuario."""
+    email: EmailStr
+
+
 # ════════════════════════════════════════════
 # Usuarios
 # ════════════════════════════════════════════

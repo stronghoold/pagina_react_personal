@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { apiFetch } from '../utils/api'
+import { apiFetch, descargarArchivo } from '../utils/api'
 import { formatCurrency } from '../utils/format'
 import { useAuth } from '../context/AuthContext'
 import { useCart } from '../context/CartContext'
@@ -50,6 +50,9 @@ const CheckoutModal = ({ open, onClose }) => {
   const [cargando, setCargando] = useState(false)
   const [error, setError] = useState(null)
   const [ventaCreada, setVentaCreada] = useState(null)
+  const [facturaCreada, setFacturaCreada] = useState(null)
+  const [correoEnviado, setCorreoEnviado] = useState(false)
+  const [descargando, setDescargando] = useState(false)
 
   // Cargar el catálogo real y cruzar los productos del carrito
   useEffect(() => {
@@ -155,6 +158,8 @@ const CheckoutModal = ({ open, onClose }) => {
         },
       })
       setVentaCreada(data.sale)
+      setFacturaCreada(data.invoice || null)
+      setCorreoEnviado(Boolean(data.correo_enviado))
       clearCart()
     } catch (err) {
       setError(err.message)
@@ -179,7 +184,7 @@ const CheckoutModal = ({ open, onClose }) => {
             </h2>
             <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
               {ventaCreada
-                ? 'Tu venta quedó registrada en el sistema y será facturada por el equipo.'
+                ? 'Tu factura fue generada y enviada al correo de tu cuenta.'
                 : 'Revisa los ítems antes de confirmar la venta.'}
             </p>
           </div>
@@ -214,14 +219,51 @@ const CheckoutModal = ({ open, onClose }) => {
               <p className="text-sm">
                 Número de venta: <strong>{ventaCreada.numero_venta}</strong>
               </p>
+              {facturaCreada && (
+                <p className="mt-1 text-sm">
+                  Factura: <strong>{facturaCreada.numero_factura}</strong>
+                </p>
+              )}
               <p className="mt-1 text-sm">
                 Total registrado: <strong>{formatCurrency(ventaCreada.total)}</strong>
               </p>
               <p className="mt-1 text-sm">Estado: {ventaCreada.estado}</p>
             </div>
+
+            {facturaCreada && (
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-800/50 dark:text-slate-300">
+                <p className="flex items-center gap-2">
+                  <span className="text-lg">📧</span>
+                  {correoEnviado
+                    ? `Enviamos la factura al correo ${user?.correo || 'de tu cuenta'}.`
+                    : 'La factura quedó registrada. Podrás enviarla o descargarla desde tu panel.'}
+                </p>
+                <button
+                  onClick={async () => {
+                    setDescargando(true)
+                    try {
+                      await descargarArchivo(
+                        `/facturas/${facturaCreada.id}/pdf`,
+                        token,
+                        `factura_${facturaCreada.numero_factura}.pdf`,
+                      )
+                    } finally {
+                      setDescargando(false)
+                    }
+                  }}
+                  disabled={descargando}
+                  className="mt-3 inline-flex items-center gap-2 rounded-xl border border-primary-300 px-4 py-2 text-sm font-semibold text-primary-600 hover:bg-primary-50 disabled:opacity-60 dark:border-primary-700 dark:text-primary-300 dark:hover:bg-primary-950/40"
+                >
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                  </svg>
+                  {descargando ? 'Generando…' : 'Descargar factura PDF'}
+                </button>
+              </div>
+            )}
+
             <p className="text-sm text-slate-500 dark:text-slate-400">
-              Puedes consultar el detalle en «Mi panel → Mis compras» y descargar la factura cuando el
-              equipo la genere.
+              Puedes consultar el detalle y todas tus facturas en «Mi panel → Mis compras».
             </p>
             <div className="flex justify-end">
               <button

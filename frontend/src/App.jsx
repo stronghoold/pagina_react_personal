@@ -13,6 +13,7 @@ import useDarkMode from './hooks/useDarkMode'
 import Index from './pages/Index'
 import QuienesSomos from './pages/QuienesSomos'
 import Contacto from './pages/Contacto'
+import Productos from './pages/Productos'
 import Login from './pages/Login'
 import RecoverPasswordPage from './pages/RecoverPasswordPage'
 import AdminPanel from './pages/admin/AdminPanel'
@@ -72,6 +73,7 @@ function AppContent() {
         <main className="flex-1">
           <Routes>
             <Route path="/" element={<Index />} />
+            <Route path="/productos" element={<Productos />} />
             <Route path="/quienes-somos" element={<QuienesSomos />} />
             <Route path="/contacto" element={<Contacto />} />
             <Route path="/armar-pc" element={<PCBuilder />} />

@@ -4,6 +4,7 @@ import { getPanelRoute } from './DesktopNav'
 
 const navItems = [
   { to: '/', label: 'Inicio' },
+  { to: '/productos', label: 'Productos' },
   { to: '/quienes-somos', label: 'Quiénes Somos' },
   { to: '/contacto', label: 'Contacto' },
 ]

@@ -13,22 +13,27 @@ Rutas de ventas: /api/ventas  (Requerimientos 1 al 6 del quinto avance)
 IMPORTANTE: las rutas /reporte/... se declaran antes de /{venta_id} para que
 FastAPI no interprete "reporte" como un identificador numérico.
 """
+import logging
 from datetime import date, datetime, time
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
-from ..config import IMPUESTO_PORCENTAJE
+from ..config import EMAIL_ENABLED, IMPUESTO_PORCENTAJE
 from ..database import get_db
 from ..models import DetalleVenta, Producto, Servicio, Usuario, Venta
 from ..schemas import VentaCreate, VentaEstadoUpdate
 from ..security import get_current_user, require_roles
+from ..utils.correo import enviar_confirmacion_compra
+from ..utils.facturacion import crear_factura_desde_venta
 from ..utils.numeracion import generar_numero_venta
-from ..utils.reportes import reporte_ventas_excel, reporte_ventas_pdf
-from ..utils.serializadores import venta_a_dict
+from ..utils.reportes import factura_pdf, reporte_ventas_excel, reporte_ventas_pdf
+from ..utils.serializadores import factura_a_dict, venta_a_dict
 
 router = APIRouter(prefix='/api/ventas', tags=['Ventas'])
+
+logger = logging.getLogger('techpc.ventas')
 
 ROLES_GESTION = ('administrador', 'empleado')
 
@@ -44,6 +49,7 @@ def _a_numero(valor) -> float:
 @router.post('', status_code=status.HTTP_201_CREATED)
 def registrar_venta(
     body: VentaCreate,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: Usuario = Depends(get_current_user),
 ):
@@ -159,9 +165,48 @@ def registrar_venta(
     db.commit()
     db.refresh(venta)
 
+    # ─── Factura automática + notificación al correo del cliente ───
+    # Al confirmar la compra se genera la factura y se envía con el PDF
+    # adjunto. Ninguno de los dos pasos interrumpe la venta: si algo falla, el
+    # error queda en el log y la venta sigue registrada correctamente.
+    factura = None
+    try:
+        factura = crear_factura_desde_venta(db, venta, body.metodo_pago)
+        db.commit()
+        db.refresh(factura)
+        db.refresh(venta)
+    except Exception as exc:  # noqa: BLE001 - la venta ya quedó registrada
+        db.rollback()
+        logger.exception(
+            'No se pudo generar la factura de la venta %s: %s', venta.numero_venta, exc
+        )
+        factura = None
+
+    datos_factura = None
+    correo_enviado = False
+    if factura is not None:
+        datos_factura = factura_a_dict(factura)
+        try:
+            # El correo se envía en segundo plano: la compra no espera al SMTP.
+            background_tasks.add_task(
+                enviar_confirmacion_compra,
+                venta_a_dict(venta),
+                datos_factura,
+                factura_pdf(datos_factura).getvalue(),
+            )
+            correo_enviado = EMAIL_ENABLED
+        except Exception as exc:  # noqa: BLE001 - el correo es opcional
+            logger.exception(
+                'No se pudo preparar el correo de la venta %s: %s',
+                venta.numero_venta,
+                exc,
+            )
+
     return {
         'message': 'Venta registrada exitosamente.',
         'sale': venta_a_dict(venta),
+        'invoice': datos_factura,
+        'correo_enviado': correo_enviado,
     }
 
 

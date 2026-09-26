@@ -9,6 +9,8 @@ Requerimiento 17 y 18: atención al cliente con respuestas naturales.
 
 La clave NUNCA se escribe en el código: se lee siempre desde el entorno.
 """
+import re
+
 import httpx
 from sqlalchemy.orm import Session
 
@@ -29,9 +31,9 @@ MENSAJE_BIENVENIDA = (
 )
 
 SUGERENCIAS = [
+    '¿Cuál es la tarjeta gráfica más barata?',
+    '¿Cuál es el procesador más barato?',
     '¿Qué productos tienen disponibles?',
-    '¿Cuánto cuesta el ensamblaje de un PC?',
-    '¿Cómo registro una PQR?',
     '¿Cómo puedo comprar?',
 ]
 
@@ -77,6 +79,38 @@ def catalogo_para_contexto(db: Session, limite: int = 15) -> str:
         f"- {s.nombre}: ${float(s.precio):,.0f} ({s.duracion_estimada or 'duración no indicada'})".replace(',', '.')
         for s in servicios
     ] or ['- Sin servicios registrados.']
+
+    lineas.append('')
+    lineas.append(_resumen_precios(db))
+    return '\n'.join(lineas)
+
+
+def _resumen_precios(db: Session) -> str:
+    """
+    Resume el producto más barato y más caro de cada categoría.
+
+    Se agrega al contexto de la IA para que pueda responder con datos exactos
+    preguntas como "cuál es la tarjeta más barata" sin inventar precios.
+    """
+    productos = db.query(Producto).filter(Producto.estado == 'activo').all()
+    if not productos:
+        return 'PRECIOS: sin productos registrados.'
+
+    por_categoria: dict[str, list] = {}
+    for producto in productos:
+        nombre = producto.categoria.nombre if producto.categoria else 'Sin categoría'
+        por_categoria.setdefault(nombre, []).append(producto)
+
+    lineas = ['PRECIOS EXTREMOS POR CATEGORÍA (producto más barato / más caro):']
+    for nombre, lista in sorted(por_categoria.items()):
+        barato = min(lista, key=lambda p: float(p.precio or 0))
+        caro = max(lista, key=lambda p: float(p.precio or 0))
+        linea = (
+            f'- {nombre}: más barato "{barato.nombre}" a '
+            f'${float(barato.precio):,.0f}; más caro "{caro.nombre}" a '
+            f'${float(caro.precio):,.0f}'
+        )
+        lineas.append(linea.replace(',', '.'))
     return '\n'.join(lineas)
 
 
@@ -111,6 +145,148 @@ def _respuesta_ia(mensaje: str, historial: list[dict], contexto: str) -> str | N
         return contenido or None
     except (httpx.HTTPError, KeyError, IndexError, ValueError):
         return None
+
+
+# ════════════════════════════════════════════
+# Consultas de precio sobre el catálogo real
+# ════════════════════════════════════════════
+
+# Expresiones que indican que el usuario quiere el producto más barato o más
+# caro. Se usan límites de palabra (\b) para no confundir "cara" con
+# "característica", por ejemplo.
+RE_PRECIO_BARATO = re.compile(
+    r'\b(barat[oa]s?|economic[oa]s?|menor precio|precio bajo|'
+    r'menos cuesta|menos vale|mas economico|mas barato)\b'
+)
+RE_PRECIO_CARO = re.compile(
+    r'\b(car[oa]s?|costos[oa]s?|premium|mayor precio|mas caro|'
+    r'mas costoso|gama alta)\b'
+)
+
+# Sinónimos por categoría: así el chatbot entiende "GPU", "CPU", "SSD", etc.
+SINONIMOS_CATEGORIA = {
+    'tarjeta': ('gpu', 'rtx', 'gtx', 'grafic', 'grafica', 'video'),
+    'procesador': ('cpu', 'ryzen', 'core i', 'intel'),
+    'memoria': ('ram', 'ddr', 'memorias'),
+    'almacenamiento': ('ssd', 'hdd', 'nvme', 'disco', 'discos'),
+    'motherboard': ('placa', 'board', 'mainboard', 'madre'),
+    'fuente': ('psu', 'poder'),
+    'gabinete': ('case', 'chasis', 'torre'),
+    'monitor': ('pantalla', 'monitores'),
+    'periferico': ('mouse', 'teclado', 'audifono', 'audífono', 'diadema', 'parlante'),
+}
+
+
+def _normalizar(texto: str) -> str:
+    """Pasa el texto a minúsculas y sin tildes para comparar con el catálogo."""
+    reemplazos = str.maketrans('áéíóúüñ', 'aeiouun')
+    return (texto or '').lower().translate(reemplazos)
+
+
+def _variantes(palabra: str) -> set[str]:
+    """Singular y plural aproximados de una palabra del nombre de la categoría."""
+    variantes = {palabra}
+    if palabra.endswith('es'):
+        variantes.add(palabra[:-2])
+    if palabra.endswith('s') and len(palabra) > 4:
+        variantes.add(palabra[:-1])
+    return variantes
+
+
+def _categoria_del_mensaje(mensaje: str, categorias: list[str]) -> str | None:
+    """Identifica la categoría a la que se refiere el usuario, si la menciona."""
+    texto = _normalizar(mensaje)
+    for categoria in categorias:
+        palabras = [
+            _normalizar(p) for p in categoria.split() if len(p.strip()) >= 4
+        ]
+        claves = set()
+        for palabra in palabras:
+            claves |= _variantes(palabra)
+            for base, extras in SINONIMOS_CATEGORIA.items():
+                if base in palabra:
+                    claves |= set(extras)
+        if any(clave and clave in texto for clave in claves):
+            return categoria
+    return None
+
+
+def _descripcion_producto(producto) -> str:
+    return (
+        f'"{producto.nombre}" con un precio de '
+        f'${float(producto.precio):,.0f} (stock {producto.stock})'.replace(',', '.')
+    )
+
+
+def consulta_precio_catalogo(mensaje: str, db: Session) -> str | None:
+    """
+    Responde preguntas como "¿cuál es la tarjeta gráfica más barata?" o
+    "¿cuál es el procesador más caro?".
+
+    Devuelve None cuando el mensaje no es una consulta de precio, para que
+    sigan funcionando los demás caminos (IA o motor de reglas).
+    """
+    texto = _normalizar(mensaje)
+    quiere_barato = RE_PRECIO_BARATO.search(texto) is not None
+    quiere_caro = RE_PRECIO_CARO.search(texto) is not None
+    if not (quiere_barato or quiere_caro):
+        return None
+
+    # Si menciona ambos, se prioriza la intención de "más barato".
+    quiere_barato = quiere_barato and not quiere_caro
+
+    productos = db.query(Producto).filter(Producto.estado == 'activo').all()
+    if not productos:
+        return 'Todavía no tenemos productos publicados en el catálogo 🙌'
+
+    categorias = sorted({
+        p.categoria.nombre for p in productos if p.categoria is not None
+    })
+    categoria = _categoria_del_mensaje(mensaje, categorias)
+
+    if categoria:
+        candidatos = [
+            p for p in productos
+            if p.categoria is not None and p.categoria.nombre == categoria
+        ]
+        if not candidatos:
+            return (
+                f'Por ahora no tenemos productos disponibles en la categoría '
+                f'{categoria}. ¿Te ayudo con otra categoría?'
+            )
+    else:
+        candidatos = productos
+
+    candidatos.sort(key=lambda p: float(p.precio or 0), reverse=not quiere_barato)
+    elegido = candidatos[0]
+
+    # Alternativas cercanas para dar más opciones al cliente
+    alternativas = candidatos[1:3]
+    lista_alt = ''
+    if alternativas:
+        opciones = '\n'.join(f'• {_descripcion_producto(p)}' for p in alternativas)
+        lista_alt = '\n\nOtras opciones:\n' + opciones
+
+    if categoria:
+        if quiere_barato:
+            return (
+                f'En {categoria}, el producto más económico es '
+                f'{_descripcion_producto(elegido)}.{lista_alt}'
+            )
+        return (
+            f'En {categoria}, el producto más costoso es '
+            f'{_descripcion_producto(elegido)}.{lista_alt}'
+        )
+
+    if quiere_barato:
+        return (
+            f'El producto más económico de todo el catálogo es '
+            f'{_descripcion_producto(elegido)}.{lista_alt}'
+        )
+    return (
+        f'El producto más costoso de todo el catálogo es '
+        f'{_descripcion_producto(elegido)}.{lista_alt}'
+    )
 
 
 def _respuesta_local(mensaje: str, db: Session) -> str:
@@ -218,6 +394,12 @@ def responder(mensaje: str, historial: list[dict], db: Session) -> tuple[str, st
 
     Devuelve una tupla (respuesta, fuente) donde fuente es 'ia' o 'local'.
     """
+    # Las preguntas de precio se responden siempre con datos exactos del
+    # catálogo (no dependen de que la IA esté configurada o acierte).
+    catalogo = consulta_precio_catalogo(mensaje, db)
+    if catalogo:
+        return catalogo, 'local'
+
     contexto = catalogo_para_contexto(db)
     respuesta = _respuesta_ia(mensaje, historial, contexto)
     if respuesta:

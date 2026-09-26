@@ -2,6 +2,8 @@
 Seguridad: hashing de contraseñas (bcrypt), generación/verificación de JWT
 y dependencias de FastAPI para proteger endpoints y controlar roles.
 """
+import secrets
+import string
 from datetime import datetime, timedelta, timezone
 
 import bcrypt
@@ -31,6 +33,34 @@ def verify_password(contrasena: str, hashed: str) -> bool:
         return bcrypt.checkpw(contrasena.encode('utf-8'), hashed.encode('utf-8'))
     except (ValueError, TypeError):
         return False
+
+
+def generar_password_temporal(longitud: int = 12) -> str:
+    """
+    Genera una contraseña temporal segura para la recuperación de acceso.
+
+    Cumple las reglas de la aplicación: mínimo 8 caracteres, con mayúscula,
+    minúscula, número y carácter especial (sin espacios). Las contraseñas se
+    almacenan con bcrypt, por eso no se puede recuperar la original: se emite
+    una nueva que el usuario puede cambiar después.
+    """
+    obligatorios = [
+        secrets.choice(string.ascii_uppercase),
+        secrets.choice(string.ascii_lowercase),
+        secrets.choice(string.digits),
+        secrets.choice('!@#$%&*?'),
+    ]
+    alfabeto = string.ascii_letters + string.digits
+    relleno = [
+        secrets.choice(alfabeto) for _ in range(max(longitud - len(obligatorios), 0))
+    ]
+    caracteres = obligatorios + relleno
+    # Mezcla aleatoria (Fisher-Yates) para que los caracteres obligatorios no
+    # queden siempre al inicio.
+    for i in range(len(caracteres) - 1, 0, -1):
+        j = secrets.randbelow(i + 1)
+        caracteres[i], caracteres[j] = caracteres[j], caracteres[i]
+    return ''.join(caracteres)
 
 
 # ─── JWT ───
