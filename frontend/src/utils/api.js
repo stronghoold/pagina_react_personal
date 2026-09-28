@@ -12,6 +12,30 @@ export const getAuthHeaders = (token) => ({
 })
 
 /**
+ * Extrae el mensaje de error que devuelve la API.
+ *
+ * FastAPI responde los errores en `detail`: un texto para HTTPException
+ * (ej: "El correo ya está registrado.") o una lista cuando falla la
+ * validación de Pydantic (422). Algunos endpoints propios devuelven
+ * `message`. Antes se leía solo `message`, así que el motivo real del error
+ * se perdía y la interfaz mostraba un texto genérico.
+ */
+export const mensajeDeError = (data, porDefecto = 'Ocurrió un error inesperado.') => {
+  const detalle = data?.detail ?? data?.message
+
+  if (typeof detalle === 'string' && detalle.trim()) return detalle
+
+  if (Array.isArray(detalle)) {
+    const mensajes = detalle
+      .map((d) => (typeof d === 'string' ? d : d?.msg))
+      .filter(Boolean)
+    if (mensajes.length) return mensajes.join(' ')
+  }
+
+  return porDefecto
+}
+
+/**
  * Realiza una petición a la API y devuelve el JSON.
  * Lanza un Error con el mensaje del backend cuando la respuesta no es exitosa.
  */
@@ -27,14 +51,7 @@ export const apiFetch = async (path, { token, method = 'GET', body, ...rest } = 
   const data = tipo.includes('application/json') ? await res.json() : null
 
   if (!res.ok) {
-    const detalle = data?.detail
-    const mensaje =
-      typeof detalle === 'string'
-        ? detalle
-        : Array.isArray(detalle)
-          ? detalle.map((d) => d.msg).join(' ')
-          : data?.message || `Error ${res.status} al consultar la API.`
-    throw new Error(mensaje)
+    throw new Error(mensajeDeError(data, `Error ${res.status} al consultar la API.`))
   }
   return data
 }

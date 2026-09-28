@@ -14,6 +14,9 @@ const RecoverPassword = () => {
   const [sent, setSent] = useState(false)
   const [loading, setLoading] = useState(false)
   const [serverError, setServerError] = useState(null)
+  // Aviso del backend cuando la contraseña se generó pero el correo no salió
+  // (por ejemplo, SMTP sin configurar).
+  const [advertencia, setAdvertencia] = useState(null)
 
   const handleChange = (e) => {
     const value = e.target.value
@@ -37,11 +40,14 @@ const RecoverPassword = () => {
 
     setLoading(true)
     setServerError(null)
+    setAdvertencia(null)
     try {
-      await apiFetch('/auth/recuperar-password', {
+      const data = await apiFetch('/auth/recuperar-password', {
         method: 'POST',
         body: { email: email.trim().toLowerCase() },
       })
+      // El backend responde correo_enviado: false cuando no pudo entregarlo.
+      setAdvertencia(data?.correo_enviado === false ? data.message : null)
       setSent(true)
     } catch (err) {
       setServerError(err.message || 'No se pudo enviar el correo de recuperación.')
@@ -74,20 +80,54 @@ const RecoverPassword = () => {
 
       {sent ? (
         /* Confirmación de envío */
-        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-6 text-center dark:border-emerald-900 dark:bg-emerald-950/40">
-          <span className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500 text-white">
-            <svg className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-            </svg>
+        <div
+          className={
+            advertencia
+              ? 'rounded-2xl border border-amber-200 bg-amber-50 p-6 text-center dark:border-amber-900 dark:bg-amber-950/40'
+              : 'rounded-2xl border border-emerald-200 bg-emerald-50 p-6 text-center dark:border-emerald-900 dark:bg-emerald-950/40'
+          }
+        >
+          <span
+            className={
+              advertencia
+                ? 'mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-amber-500 text-white'
+                : 'mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500 text-white'
+            }
+          >
+            {advertencia ? (
+              <svg className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+              </svg>
+            ) : (
+              <svg className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+              </svg>
+            )}
           </span>
-          <h2 className="text-lg font-bold text-emerald-800 dark:text-emerald-300">
-            Correo enviado
+          <h2
+            className={
+              advertencia
+                ? 'text-lg font-bold text-amber-800 dark:text-amber-300'
+                : 'text-lg font-bold text-emerald-800 dark:text-emerald-300'
+            }
+          >
+            {advertencia ? 'Correo no enviado' : 'Correo enviado'}
           </h2>
-          <p className="mt-2 text-sm text-emerald-700 dark:text-emerald-400">
-            Enviamos una contraseña temporal a <strong>{email}</strong>. Revísala
-            (y la carpeta de spam), inicia sesión con ella y cámbiala por una propia.
+          <p
+            className={
+              advertencia
+                ? 'mt-2 text-sm text-amber-700 dark:text-amber-400'
+                : 'mt-2 text-sm text-emerald-700 dark:text-emerald-400'
+            }
+          >
+            {advertencia || (
+              <>
+                Enviamos una contraseña temporal a <strong>{email}</strong>. Revísala
+                (y la carpeta de spam), inicia sesión con ella y cámbiala por una propia.
+              </>
+            )}
           </p>
-          <Button variant="outline" className="mt-5" onClick={() => { setSent(false); setEmail('') }}>
+          <Button variant="outline" className="mt-5" onClick={() => { setSent(false); setAdvertencia(null); setEmail('') }}>
             Enviar otro correo
           </Button>
         </div>

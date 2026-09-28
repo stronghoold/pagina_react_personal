@@ -1,9 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react'
-import API_URL_BASE from '../utils/api'
+import API_URL_BASE, { apiFetch } from '../utils/api'
 
 const AuthContext = createContext(null)
-
-const API_URL = `${API_URL_BASE}/auth`
 
 // ─── Helpers para localStorage como fallback ───
 const USERS_KEY = 'techpc_users'
@@ -86,18 +84,12 @@ export const AuthProvider = ({ children }) => {
     // Siempre intentar el backend real primero (sin depender del chequeo
     // previo, que puede no haber terminado todavía cuando el usuario
     // le da clic a "Iniciar sesión").
+    // apiFetch ya traduce los errores de FastAPI (detail) a un mensaje claro.
     try {
-      const res = await fetch(`${API_URL}/login`, {
+      const data = await apiFetch('/auth/login', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, contrasena }),
+        body: { email, contrasena },
       })
-
-      const data = await res.json()
-      if (!res.ok) {
-        // Error de credenciales del backend — sí se propaga
-        throw new Error(data.message || 'Correo o contraseña incorrectos.')
-      }
 
       backendAvailableRef.current = true
       localStorage.setItem('techpc_token', data.token)
@@ -144,25 +136,20 @@ export const AuthProvider = ({ children }) => {
   // ─── Register ───
   const register = useCallback(async (formData) => {
     // Siempre intentar el backend real primero.
+    // apiFetch propaga el mensaje real del backend (por ejemplo
+    // "El correo ya está registrado.") en lugar de un texto genérico.
     try {
-      const res = await fetch(`${API_URL_BASE}/usuarios/registro`, {
+      const data = await apiFetch('/usuarios/registro', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: formData,
       })
-
-      const data = await res.json()
-      if (!res.ok) {
-        // Error del backend (ej: correo duplicado) — sí se propaga
-        throw new Error(data.message || 'Error al registrar usuario.')
-      }
       backendAvailableRef.current = true
       return data
     } catch (err) {
       if (isNetworkError(err)) {
         backendAvailableRef.current = false
       } else {
-        // Error de validación del backend — propagar
+        // Error de validación o duplicado del backend — propagar
         throw err
       }
     }
